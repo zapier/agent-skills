@@ -196,6 +196,12 @@ You're logged in to Zapier as <email>, and the Zapier SDK CLI is installed, but 
 
 Zapier Workflows is currently only available to members of our closed beta.
 
+To request access, fill out the beta sign-up form:
+
+https://next-gen-zaps.zapier.app/
+
+Submitting the form does not grant access immediately. The Zapier team will review your request and let you know once access has been granted.
+
 After your account is allowlisted, rerun the workflows-install skill in this workspace. Reinstalling Node, npm, git, or the SDK CLI will not fix this access check.
 ```
 
