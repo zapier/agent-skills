@@ -35,7 +35,7 @@ flowchart TD
 ## What This Installs
 
 - `@zapier/zapier-sdk-cli@latest` — public npm package that provides `zapier-sdk`, `zapier-sdk-cli`, and `zapier-sdk-experimental`. Installed globally.
-- Four companion skills installed through the `skills` CLI: `workflows/build`, `workflows/list`, `workflows/history`, and `workflows/modify`.
+- Four companion skills installed through the `skills` CLI: `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
 
 What this does not install:
 
@@ -139,7 +139,7 @@ Install the companion skills into the current workspace. This does not require Z
 Use the public `skills.sh` install path. The `npx` command runs the `skills` CLI; the skill content comes from the public `zapier/agent-skills` GitHub repo after that repo is published.
 
 ```bash
-npx skills add zapier/agent-skills --skill workflows-build --yes
+npx skills add zapier/agent-skills --skill workflows-create --yes
 npx skills add zapier/agent-skills --skill workflows-list --yes
 npx skills add zapier/agent-skills --skill workflows-history --yes
 npx skills add zapier/agent-skills --skill workflows-modify --yes
@@ -151,7 +151,7 @@ Verify:
 npx skills list --json
 ```
 
-Expected output should include the installed workflows companion skills: `workflows-build`, `workflows-list`, `workflows-history`, and `workflows-modify`.
+Expected output should include the installed workflows companion skills: `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`.
 
 If any companion skill is missing, rerun the specific `npx skills add ...` command and diagnose before proceeding.
 
@@ -215,7 +215,7 @@ Tell the user:
 - Zapier SDK CLI is installed and on PATH, confirmed via `which zapier-sdk`.
 - Code Workflows experimental commands are available.
 - The authenticated Zapier account email from `zapier-sdk get-profile --json`.
-- Four companion workflow skills are installed: `workflows/build`, `workflows/list`, `workflows/history`, and `workflows/modify`.
+- Four companion workflow skills are installed: `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
 - Read-only workflow listing succeeded.
 - This confirms SDK CLI install, skill bootstrap, login, and read-only Code Workflows access. It does not yet prove that building, publishing, triggering, or running a full workflow works.
 
