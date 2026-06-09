@@ -23,24 +23,26 @@ flowchart TD
   installCli --> verifyExperimental["3. Verify experimental commands"]
   verifyExperimental --> commandsOk{"Code Workflows commands visible?"}
   commandsOk -->|no| stopCli["STOP: diagnose SDK CLI install"]
-  commandsOk -->|yes| installSkills["4. Bootstrap sibling skills"]
-  installSkills --> checkAuth["5. Check Zapier auth"]
+  commandsOk -->|yes| checkAuth["4. Check Zapier auth"]
   checkAuth --> authOk{"JSON has data and no errors?"}
-  authOk -->|no| login["5b. Ask user to run interactive login"]
+  authOk -->|no| login["4b. Ask user to run interactive login"]
   login --> checkAuth
-  authOk -->|yes| smoke["6. Read-only smoke test"]
-  smoke --> report["7. Report success and next steps"]
+  authOk -->|yes| checkAccess["5. Check Zapier Workflows EA access"]
+  checkAccess --> accessOk{"Read-only workflow list succeeds?"}
+  accessOk -->|no| stopAccess["STOP: closed beta access required"]
+  accessOk -->|yes| installSkills["6. Bootstrap companion skills"]
+  installSkills --> report["7. Report success and next steps"]
 ```
 
 ## What This Installs
 
 - `@zapier/zapier-sdk-cli@latest` — public npm package that provides `zapier-sdk`, `zapier-sdk-cli`, and `zapier-sdk-experimental`. Installed globally.
-- Four companion skills installed through the `skills` CLI: `workflows/build`, `workflows/list`, `workflows/history`, and `workflows/modify`.
+- Four companion skills installed through the `skills` CLI: `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
 
 What this does not install:
 
 - `@zapier/zapier-sdk-code-substrate` — old private CLI path. Do not install it for EA.
-- `@zapier/zapier-durable` globally. The build skill installs or pins it inside workflow projects when needed.
+- `@zapier/zapier-durable` globally. The create skill installs or pins it inside workflow projects when needed.
 
 ## Step 1: Probe Environment
 
@@ -132,36 +134,7 @@ zapier-sdk --experimental --help
 
 Proceed only after the Code Workflows command group is visible.
 
-## Step 4: Bootstrap The Workflows Companion Skills
-
-Install the companion skills into the current workspace. This does not require Zapier authentication, so do it before the login gate.
-
-Use the public `skills.sh` install path. The `npx` command runs the `skills` CLI; the skill content comes from the public `zapier/agent-skills` GitHub repo after that repo is published.
-
-```bash
-npx skills add zapier/agent-skills --skill workflows-build --yes
-npx skills add zapier/agent-skills --skill workflows-list --yes
-npx skills add zapier/agent-skills --skill workflows-history --yes
-npx skills add zapier/agent-skills --skill workflows-modify --yes
-```
-
-Verify:
-
-```bash
-npx skills list --json
-```
-
-Expected output should include the installed workflows companion skills: `workflows-build`, `workflows-list`, `workflows-history`, and `workflows-modify`.
-
-If any companion skill is missing, rerun the specific `npx skills add ...` command and diagnose before proceeding.
-
-Updates later use the standard `skills` CLI update path:
-
-```bash
-npx skills update --project
-```
-
-## Step 5: Authenticate To Zapier
+## Step 4: Authenticate To Zapier
 
 Check auth state first:
 
@@ -196,17 +169,72 @@ Do not ask the user for a Zapier password, API key, npm token, or copied auth to
 
 If the user wants non-interactive auth for automation, note that the CLI error message may mention `ZAPIER_CREDENTIALS` or client credential environment variables. For this EA install path, prefer browser login unless the user already has client credentials.
 
-## Step 6: Smoke Test
+## Step 5: Check Zapier Workflows EA Access
 
-Confirm the install path works end-to-end with a read-only Code Workflows call:
+After SDK profile auth succeeds, confirm the authenticated account has Zapier Workflows EA access with a read-only Code Workflows call:
 
 ```bash
 zapier-sdk --experimental list-workflows --json
 ```
 
-Expected output is JSON containing workflow data or an empty list. This command should not create or modify cloud state.
+Expected output is JSON containing workflow data or an empty list, with no errors. This command should not create or modify cloud state.
 
-Treat the smoke test as successful only if the JSON has workflow data or an empty workflow list and no errors. Do not rely on exit code alone; this command may return exit code 0 while the JSON body contains errors. If `data` is null, `errors` is non-empty, or the error message says authentication is required, return to Step 5. If it says the command is unknown, return to Step 3 and diagnose the CLI version.
+Treat the access check as successful only if the JSON has workflow data or an empty workflow list and `errors` is empty. Do not rely on exit code alone; this command may return exit code 0 while the JSON body contains errors.
+
+If the response says authentication is required, return to Step 4 and diagnose SDK auth.
+
+If the response includes any of the following, treat it as a Zapier Workflows EA access failure and stop before installing companion skills:
+
+- `None of the security schemes (userJwt) successfully authenticated this request`
+- `allowlist`, `not allowlisted`, or `not whitelisted`
+- `forbidden`, `permission`, `unauthorized`, or `access denied`
+
+When EA access fails, tell the user:
+
+```text
+You're logged in to Zapier as <email>, and the Zapier SDK CLI is installed, but this account does not currently have Zapier Workflows EA access.
+
+Zapier Workflows is currently only available to members of our closed beta.
+
+To request access, fill out the beta sign-up form:
+
+https://next-gen-zaps.zapier.app/
+
+Submitting the form does not grant access immediately. The Zapier team will review your request and let you know once access has been granted.
+
+After your account is allowlisted, rerun the workflows-install skill in this workspace. Reinstalling Node, npm, git, or the SDK CLI will not fix this access check.
+```
+
+Use the email from `zapier-sdk get-profile --json` in place of `<email>`.
+
+## Step 6: Bootstrap The Workflows Companion Skills
+
+Install the companion skills into the current workspace only after SDK auth and Zapier Workflows EA access are confirmed.
+
+Use the public `skills.sh` install path. The `npx` command runs the `skills` CLI; the skill content comes from the public `zapier/agent-skills` GitHub repo after that repo is published.
+
+```bash
+npx skills add zapier/agent-skills --skill workflows-create --yes
+npx skills add zapier/agent-skills --skill workflows-list --yes
+npx skills add zapier/agent-skills --skill workflows-history --yes
+npx skills add zapier/agent-skills --skill workflows-modify --yes
+```
+
+Verify:
+
+```bash
+npx skills list --json
+```
+
+Expected output should include the installed workflows companion skills: `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`.
+
+If any companion skill is missing, rerun the specific `npx skills add ...` command and diagnose before proceeding.
+
+Updates later use the standard `skills` CLI update path:
+
+```bash
+npx skills update --project
+```
 
 ## Step 7: Report Success
 
@@ -215,15 +243,15 @@ Tell the user:
 - Zapier SDK CLI is installed and on PATH, confirmed via `which zapier-sdk`.
 - Code Workflows experimental commands are available.
 - The authenticated Zapier account email from `zapier-sdk get-profile --json`.
-- Four companion workflow skills are installed: `workflows/build`, `workflows/list`, `workflows/history`, and `workflows/modify`.
-- Read-only workflow listing succeeded.
-- This confirms SDK CLI install, skill bootstrap, login, and read-only Code Workflows access. It does not yet prove that building, publishing, triggering, or running a full workflow works.
+- Zapier Workflows EA access was confirmed with a read-only workflow listing.
+- Four companion workflow skills are installed: `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
+- This confirms SDK CLI install, login, Zapier Workflows EA access, and skill bootstrap. It does not yet prove that building, publishing, triggering, or running a full workflow works.
 
 Next steps for the user:
 
 - Configure app connections at https://zapier.com/app/assets/connections before attempting to build workflows.
 - Reload the Cursor workspace or restart Cursor so the new skills are picked up. This is required before Cursor can reliably auto-discover the installed workflow skills.
-- Ask Cursor to build a workflow, for example: "Build me a Zapier workflow that takes a manual input and sends a Slack message."
+- Ask Cursor to create a workflow, for example: "Create a Zapier workflow that takes a manual input and sends a Slack message."
 
 ## Troubleshooting
 
@@ -233,8 +261,7 @@ Next steps for the user:
 | `npm install -g` fails with permissions errors | Global npm prefix is not user-writable | Use nvm or Homebrew Node; avoid `sudo npm install -g` unless the user explicitly accepts that system-level change |
 | `zapier-sdk --experimental --help` lacks Code Workflows commands | Old CLI or wrong package installed | Install `@zapier/zapier-sdk-cli@latest`, then rerun `zapier-sdk --version` and the help command |
 | `zapier-sdk get-profile` says not logged in | User has not authenticated the CLI | Run `zapier-sdk login` in an interactive terminal, then retry |
-| `get-profile` succeeds but `list-workflows` returns an access or permission error | The Zapier account may not be allowlisted for Zapier Workflows EA | Tell the user the SDK install worked, but their Zapier account needs Zapier Workflows EA access before the smoke test can pass |
-| `list-workflows` returns `None of the security schemes (userJwt) successfully authenticated this request` | Code Workflows rejected the authenticated account even though SDK profile auth worked | Treat this as a Zapier Workflows EA allowlist/backend access issue. Confirm the account email and SDK profile ID with `zapier-sdk get-profile --json`, then ask the Zapier Workflows team to verify the allowlist/backend setup for that account |
+| `get-profile` succeeds but `list-workflows` returns an access, permission, allowlist, or JWT/security-scheme error | The Zapier account is authenticated but does not have Zapier Workflows EA access | Stop before installing companion skills. Tell the user Zapier Workflows is currently only available to members of our closed beta, include the authenticated email, and ask them to rerun `workflows-install` after allowlisting. |
 | `zapier-sdk login` does not open a browser | No default browser configured, or remote/SSH session | Try `zapier-sdk login --no-browser` if supported by the installed CLI, or run from a local terminal |
 | `zapier-sdk login` hangs in a non-interactive shell | `login` is browser-interactive; cannot run unattended | Ask the user to run it manually in an actual terminal |
 | `npx skills add zapier/agent-skills --skill workflows-...` fails | Public skill source is unavailable, the skill has not been published yet, or network access failed | Confirm the `zapier/agent-skills` public repo and workflow skill path are available, then rerun the specific install command |
