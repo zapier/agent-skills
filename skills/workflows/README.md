@@ -2,11 +2,14 @@
 
 Skills for setting up, building, inspecting, and modifying Zapier Workflows from an agent-enabled coding workspace.
 
-Install path once published:
+## Set Up Zapier Workflows
 
-```bash
-npx skills add zapier/agent-skills --skill workflows-install
-```
+Copy and paste this into your Cursor agent prompt:
+
+> Install the Zapier Workflows setup skill with:
+> `npx skills add zapier/agent-skills --skill workflows-install`
+>
+> Then run the `workflows-install` skill to set up this workspace.
 
 ## Skills
 
