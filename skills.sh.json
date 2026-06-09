@@ -1,5 +1,16 @@
 {
   "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
   "notGrouped": "bottom",
-  "groupings": []
+  "groupings": [
+    {
+      "name": "Workflows",
+      "skills": [
+        "zapier-workflows-install",
+        "zapier-workflows-build",
+        "zapier-workflows-list",
+        "zapier-workflows-history",
+        "zapier-workflows-modify"
+      ]
+    }
+  ]
 }
