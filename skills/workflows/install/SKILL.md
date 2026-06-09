@@ -1,5 +1,5 @@
 ---
-name: zapier-workflows-install
+name: workflows-install
 description: Install the Zapier SDK CLI for Zapier Workflows Early Access and bootstrap the workflows companion skills. Use when the user wants to set up Zapier Workflows, get started building durable workflows, install workflow skills, or configure the Zapier SDK CLI in Cursor.
 license: MIT
 metadata:
@@ -139,10 +139,10 @@ Install the companion skills into the current workspace. This does not require Z
 Use the public `skills.sh` install path. The `npx` command runs the `skills` CLI; the skill content comes from the public `zapier/agent-skills` GitHub repo after that repo is published.
 
 ```bash
-npx skills add zapier/agent-skills --skill zapier-workflows-build --yes
-npx skills add zapier/agent-skills --skill zapier-workflows-list --yes
-npx skills add zapier/agent-skills --skill zapier-workflows-history --yes
-npx skills add zapier/agent-skills --skill zapier-workflows-modify --yes
+npx skills add zapier/agent-skills --skill workflows-build --yes
+npx skills add zapier/agent-skills --skill workflows-list --yes
+npx skills add zapier/agent-skills --skill workflows-history --yes
+npx skills add zapier/agent-skills --skill workflows-modify --yes
 ```
 
 Verify:
@@ -151,7 +151,7 @@ Verify:
 npx skills list --json
 ```
 
-Expected output should include the installed workflows companion skills: `zapier-workflows-build`, `zapier-workflows-list`, `zapier-workflows-history`, and `zapier-workflows-modify`.
+Expected output should include the installed workflows companion skills: `workflows-build`, `workflows-list`, `workflows-history`, and `workflows-modify`.
 
 If any companion skill is missing, rerun the specific `npx skills add ...` command and diagnose before proceeding.
 
@@ -237,5 +237,5 @@ Next steps for the user:
 | `list-workflows` returns `None of the security schemes (userJwt) successfully authenticated this request` | Code Workflows rejected the authenticated account even though SDK profile auth worked | Treat this as a Zapier Workflows EA allowlist/backend access issue. Confirm the account email and SDK profile ID with `zapier-sdk get-profile --json`, then ask the Zapier Workflows team to verify the allowlist/backend setup for that account |
 | `zapier-sdk login` does not open a browser | No default browser configured, or remote/SSH session | Try `zapier-sdk login --no-browser` if supported by the installed CLI, or run from a local terminal |
 | `zapier-sdk login` hangs in a non-interactive shell | `login` is browser-interactive; cannot run unattended | Ask the user to run it manually in an actual terminal |
-| `npx skills add zapier/agent-skills --skill zapier-workflows-...` fails | Public skill source is unavailable, the skill has not been published yet, or network access failed | Confirm the `zapier/agent-skills` public repo and workflow skill path are available, then rerun the specific install command |
+| `npx skills add zapier/agent-skills --skill workflows-...` fails | Public skill source is unavailable, the skill has not been published yet, or network access failed | Confirm the `zapier/agent-skills` public repo and workflow skill path are available, then rerun the specific install command |
 | Skills do not auto-invoke after install | Cursor has not reloaded `.cursor/skills/` | Reload workspace or restart Cursor |

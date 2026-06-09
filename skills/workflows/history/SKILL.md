@@ -1,5 +1,5 @@
 ---
-name: zapier-workflows-history
+name: workflows-history
 description: Show run history for a specific durable workflow using the Zapier SDK experimental Code Workflows commands. Use when the user asks for run history, execution history, what happened with this Zap, or how a workflow fired.
 license: MIT
 metadata:

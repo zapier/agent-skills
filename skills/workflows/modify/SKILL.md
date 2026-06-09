@@ -1,5 +1,5 @@
 ---
-name: zapier-workflows-modify
+name: workflows-modify
 description: Modify and republish an existing durable workflow using the Zapier SDK experimental Code Workflows commands. Use when the user asks to fix my Zap, update my Zap, modify my workflow, repair this Zap, or edit a deployed Zapier workflow.
 license: MIT
 metadata:

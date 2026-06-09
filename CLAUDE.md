@@ -29,14 +29,14 @@ skills/
 - **Team/project folder**: `kebab-case` (e.g. `workflows`).
 - **Skill directory**: `kebab-case` (e.g. `install`, `build`).
 - **SKILL.md**: always uppercase, always this exact filename.
-- **`name:` field**: prefix with `zapier-<team>-` (e.g. `zapier-workflows-install`). The folder can stay short, but the `name:` is what the agent sees once a skill is installed alongside skills from every other source — keep it unambiguous and collision-proof. Generic names like `install` or `build` **must** be namespaced.
+- **`name:` field**: prefix with `<team>-` (e.g. `workflows-install`). The folder can stay short, but the `name:` is what the agent sees once a skill is installed alongside skills from every other source — keep it unambiguous and collision-proof. Generic names like `install` or `build` **must** be namespaced.
 - **Scripts**: `kebab-case.sh` or `kebab-case.mjs`.
 
 ### SKILL.md format
 
 ```markdown
 ---
-name: zapier-<team>-<skill>
+name: <team>-<skill>
 description: One sentence describing when to use this skill. Include trigger phrases like "deploy my workflow", "set up a Zapier script", etc.
 license: MIT
 metadata:

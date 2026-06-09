@@ -1,5 +1,5 @@
 ---
-name: zapier-workflows-build
+name: workflows-build
 description: Build a durable Zapier workflow from natural language using @zapier/zapier-durable and the Zapier SDK CLI. Use when the user wants to build a Zapier workflow, create an automation, write a durable workflow, build me a Zap that, create a durable that, or automate a multi-step process involving Zapier-connected apps.
 license: MIT
 metadata:

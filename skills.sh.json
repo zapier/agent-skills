@@ -5,11 +5,11 @@
     {
       "name": "Workflows",
       "skills": [
-        "zapier-workflows-install",
-        "zapier-workflows-build",
-        "zapier-workflows-list",
-        "zapier-workflows-history",
-        "zapier-workflows-modify"
+        "workflows-install",
+        "workflows-build",
+        "workflows-list",
+        "workflows-history",
+        "workflows-modify"
       ]
     }
   ]

@@ -1,5 +1,5 @@
 ---
-name: zapier-workflows-list
+name: workflows-list
 description: List durable workflows in the authenticated Zapier account using the Zapier SDK experimental Code Workflows commands. Use when the user asks to list my Zaps, show my durable workflows, what workflows do I have, or see what Zapier workflows are deployed.
 license: MIT
 metadata:
