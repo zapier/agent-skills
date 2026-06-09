@@ -25,7 +25,7 @@ Skills are grouped by team or project. Each category's README lists its skills; 
 
 | Category | Description |
 | -------- | ----------- |
-| _(none yet)_ | |
+| [workflows](skills/workflows) | Skills for setting up, building, inspecting, and modifying Zapier Workflows |
 
 ## Installation
 

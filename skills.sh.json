@@ -1,5 +1,16 @@
 {
   "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
   "notGrouped": "bottom",
-  "groupings": []
+  "groupings": [
+    {
+      "name": "Workflows",
+      "skills": [
+        "workflows-install",
+        "workflows-build",
+        "workflows-list",
+        "workflows-history",
+        "workflows-modify"
+      ]
+    }
+  ]
 }
