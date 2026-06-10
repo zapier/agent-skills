@@ -1,6 +1,6 @@
 ---
 name: workflows-install
-description: Install the Zapier SDK CLI for Zapier Workflows Early Access and bootstrap the workflows companion skills. Use when the user wants to set up Zapier Workflows, get started building durable workflows, install workflow skills, or configure the Zapier SDK CLI in Cursor.
+description: Install the Zapier SDK CLI for Zapier Workflows Early Access and bootstrap the workflows companion skills. Use when the user wants to set up Zapier Workflows, get started building durable workflows, install workflow skills, or configure the Zapier SDK CLI.
 license: MIT
 metadata:
   author: zapier
@@ -250,8 +250,8 @@ Tell the user:
 Next steps for the user:
 
 - Configure app connections at https://zapier.com/app/assets/connections before attempting to build workflows.
-- Reload the Cursor workspace or restart Cursor so the new skills are picked up. This is required before Cursor can reliably auto-discover the installed workflow skills.
-- Ask Cursor to create a workflow, for example: "Create a Zapier workflow that takes a manual input and sends a Slack message."
+- Reload your agent workspace so the new skills are picked up. This is required before the agent can reliably auto-discover the installed workflow skills.
+- Ask your agent to create a workflow, for example: "Create a Zapier workflow that takes a manual input and sends a Slack message."
 
 ## Troubleshooting
 
@@ -265,4 +265,4 @@ Next steps for the user:
 | `zapier-sdk login` does not open a browser | No default browser configured, or remote/SSH session | Try `zapier-sdk login --no-browser` if supported by the installed CLI, or run from a local terminal |
 | `zapier-sdk login` hangs in a non-interactive shell | `login` is browser-interactive; cannot run unattended | Ask the user to run it manually in an actual terminal |
 | `npx skills add zapier/agent-skills --skill workflows-...` fails | Public skill source is unavailable, the skill has not been published yet, or network access failed | Confirm the `zapier/agent-skills` public repo and workflow skill path are available, then rerun the specific install command |
-| Skills do not auto-invoke after install | Cursor has not reloaded `.cursor/skills/` | Reload workspace or restart Cursor |
+| Skills do not auto-invoke after install | Agent workspace has not reloaded the skills directory | Reload workspace or restart your agent |
