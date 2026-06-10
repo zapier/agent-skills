@@ -90,7 +90,20 @@ If `zapier-sdk` is missing, install the CLI globally:
 npm install -g @zapier/zapier-sdk-cli@latest
 ```
 
-If `zapier-sdk` already exists, do not assume it is usable yet. Continue to Step 3 and verify the Code Workflows commands. If Step 3 fails because Code Workflows commands are missing, update the CLI with `npm install -g @zapier/zapier-sdk-cli@latest`, then retry Step 3 once.
+If `zapier-sdk` already exists, compare the installed version from `zapier-sdk --version` with the latest version from `npm view @zapier/zapier-sdk-cli version`. If they differ, update the CLI:
+
+```bash
+npm install -g @zapier/zapier-sdk-cli@latest
+```
+
+After updating, rerun:
+
+```bash
+zapier-sdk --version
+npm view @zapier/zapier-sdk-cli version
+```
+
+Continue only when the installed CLI version matches the latest published `@zapier/zapier-sdk-cli` version.
 
 Verify the binary is on PATH:
 
@@ -105,6 +118,12 @@ If global npm installs fail because of permissions, tell the user to fix their N
 
 ```bash
 zapier-sdk --experimental --help
+zapier-sdk --experimental create-workflow --help
+zapier-sdk --experimental publish-workflow-version --help
+zapier-sdk --experimental run-durable --help
+zapier-sdk --experimental list-triggers --help
+zapier-sdk --experimental get-workflow-run --help
+zapier-sdk --experimental trigger-workflow --help
 ```
 
 Expected output includes the Code Workflows command group, including commands such as:
@@ -115,7 +134,17 @@ list-workflows
 run-durable
 publish-workflow-version
 list-workflow-runs
+get-workflow-run
 ```
+
+The command-specific help must expose the flags the companion skills depend on:
+
+- `create-workflow --help` includes `--is_private`.
+- `publish-workflow-version --help` includes `--connections`, `--app_versions`, and `--trigger`.
+- `run-durable --help` includes `--connections` and `--private`.
+- `list-triggers --help` succeeds.
+- `get-workflow-run --help` succeeds.
+- `trigger-workflow --help` includes `--input`.
 
 The equivalent binary may also work:
 
@@ -125,14 +154,15 @@ zapier-sdk-experimental --help
 
 If neither form exposes Code Workflows commands, stop and diagnose the SDK CLI install. Do not fall back to `@zapier/zapier-sdk-code-substrate`.
 
-If `zapier-sdk` exists but the Code Workflows command group is missing, the user likely has an older SDK CLI. Run:
+If `zapier-sdk` exists but the Code Workflows command group or required command-specific flags are missing, the user likely has an older SDK CLI. Run:
 
 ```bash
 npm install -g @zapier/zapier-sdk-cli@latest
 zapier-sdk --experimental --help
+zapier-sdk --experimental publish-workflow-version --help
 ```
 
-Proceed only after the Code Workflows command group is visible.
+Retry the command-specific help checks once after updating. Proceed only after the Code Workflows command group and required flags are visible. If the required flags are still missing after updating, stop and report the installed CLI version and latest npm version; do not install companion skills into a workspace that cannot run their documented command shapes.
 
 ## Step 4: Authenticate To Zapier
 

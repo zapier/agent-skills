@@ -27,7 +27,15 @@ If auth fails, ask the user to run `zapier-sdk login` in an interactive terminal
 zapier-sdk --experimental list-workflows --json
 ```
 
-Parse the JSON output and format what the user asked for. Common useful fields may include `id`, `name`, `enabled`, `is_private`, `created_by_user_id`, `created_at`, `updated_at`, `description`, and trigger-related metadata if present.
+Parse the JSON output and format what the user asked for. Common useful fields may include `id`, `name`, `enabled`, `is_private`, `created_by_user_id`, `created_at`, `updated_at`, `description`, `current_version`, and trigger-related metadata if present.
+
+For each workflow with an `id`, include the Zapier editor link:
+
+```text
+https://zapier.com/durables-editor/<workflow-id>
+```
+
+Treat `trigger_url` as sensitive because it contains a secret token. Do not print `trigger_url` unless the user explicitly asks for it.
 
 ## Ownership Scoping
 

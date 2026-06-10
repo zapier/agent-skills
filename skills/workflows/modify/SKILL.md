@@ -43,7 +43,8 @@ Capture:
 - `source_files`, especially `source_files["workflow.ts"]`.
 - `dependencies`.
 - `zapier_durable_version`.
-- Any connection, app version, trigger, or workflow metadata present in the response.
+- `enabled`.
+- Any `connections`, `app_versions`, `trigger`, or workflow metadata present in the workflow or version response.
 
 The current SDK publish command takes `source_files` as a JSON object. Do not pass a raw `workflow.ts` path to `publish-workflow-version`.
 
@@ -51,7 +52,7 @@ The current SDK publish command takes `source_files` as a JSON object. Do not pa
 
 Prefer editing an existing local workflow file if one exists. Otherwise, write `source_files["workflow.ts"]` into a local `workflow.ts` in a workflow-specific directory and edit that copy.
 
-Apply the requested change narrowly. Preserve existing Zod schemas, `ctx.step` boundaries, connection aliases, dependency pins, and durable runtime version unless there is a reason to change them.
+Apply the requested change narrowly. Preserve existing Zod schemas, `ctx.step` boundaries, connection aliases, dependency pins, durable runtime version, publish connection bindings, app-version bindings, trigger configuration, and visibility/enabled state unless there is a reason to change them.
 
 ## Step 4: Optional Synthetic Test
 
@@ -69,9 +70,12 @@ Run the workflow:
 zapier-sdk --experimental run-durable "$SOURCE_FILES" \
   --dependencies '<deps from fetched version>' \
   --zapier_durable_version '<durable version from fetched version>' \
-  --connections '<connections JSON if needed>' \
-  --input '<synthetic input JSON>'
+  --connections '<run-durable alias-to-connection-id JSON if needed>' \
+  --input '<synthetic input JSON>' \
+  --private
 ```
+
+For synthetic `run-durable` tests, convert publish connection bindings into the run-only alias-to-connection-id shape. Do not pass nested publish bindings like `{ "alias": { "connection_id": "..." } }` to `run-durable`.
 
 If the run returns a run ID, inspect it when needed:
 
@@ -86,7 +90,7 @@ Before publishing, summarize for the user:
 1. The diagnosis.
 2. The code or config change.
 3. The workflow ID being updated.
-4. The publish command shape and any values that will be preserved from the old version.
+4. The publish command shape and values that will be preserved from the old version, including dependencies, durable version, enabled state, connections, app versions, and trigger configuration.
 
 Wait for explicit confirmation before publishing.
 
@@ -102,10 +106,17 @@ Publish:
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
   --dependencies '<deps from fetched version>' \
   --zapier_durable_version '<durable version from fetched version>' \
-  --enabled
+  --connections '<connection bindings from fetched version>' \
+  --app_versions '<app version bindings from fetched version>' \
+  --trigger '<trigger config from fetched version>' \
+  --json
 ```
 
-Current v1 caution: the old trigger republish flags (`--trigger-app`, `--trigger-action`, `--trigger-auth`, `--trigger-params`) are not part of the verified SDK CLI surface. Do not promise trigger preservation through those flags. If the fetched metadata shows trigger configuration that cannot be republished with the current command, stop and tell the user this requires SDK confirmation before changing that workflow.
+Use the fetched workflow's enabled state when publishing. If the workflow was enabled before the edit, either omit `--enabled` or pass bare `--enabled` because publish defaults to enabled. If the workflow was disabled before the edit, add `--enabled false`; do not use `--enabled=false` or `--no-enabled`. Do not accidentally re-enable a disabled workflow.
+
+Omit `--connections`, `--app_versions`, or `--trigger` only when the fetched metadata confirms the workflow version does not use that field. If the fetched metadata includes trigger, connection, or app-version configuration but the shape cannot be mapped to the current publish flags, stop before publishing and tell the user the workflow needs SDK confirmation rather than silently dropping metadata.
+
+Do not use the old trigger republish flags (`--trigger-app`, `--trigger-action`, `--trigger-auth`, `--trigger-params`). The current trigger publish path is the single JSON `--trigger` object.
 
 ## Step 6: Verify
 
@@ -116,8 +127,16 @@ zapier-sdk --experimental get-workflow <workflow-id> --json
 zapier-sdk --experimental list-workflow-versions <workflow-id> --json
 ```
 
-Confirm the newest version reflects the publish and that the workflow is still enabled if it should be. If the change is hard to validate without a live trigger fire, tell the user exactly what test event to send and what result to expect.
+Confirm the newest version reflects the publish, the workflow is still enabled if it should be, and trigger/connection/app-version metadata was preserved. If the change is hard to validate without a live trigger fire, tell the user exactly what test event to send and what result to expect.
+
+Finish by reporting:
+
+- Workflow name and ID.
+- Whether the requested change was published.
+- Whether trigger, connection, and app-version metadata were preserved.
+- Whether the workflow is enabled.
+- The Zapier editor link: `https://zapier.com/durables-editor/<workflow-id>`.
 
 ## Reverting
 
-Previous versions remain available. To revert, fetch the prior version's source and republish it with the same `publish-workflow-version` pattern above, preserving dependency and durable version pins.
+Previous versions remain available. To revert, fetch the prior version's source and republish it with the same `publish-workflow-version` pattern above, preserving dependency, durable version, connection, app-version, trigger, and enabled-state metadata.

@@ -31,12 +31,26 @@ zapier-sdk --experimental list-workflow-runs <workflow-id> --json
 
 Parse the JSON output. Useful fields may include `id`, `status`, `started_at`, `finished_at`, `input`, and `output`.
 
+When the workflow ID is known, include the Zapier editor link:
+
+```text
+https://zapier.com/durables-editor/<workflow-id>
+```
+
 ## Drill Into A Run
 
-If a single run failed or the user wants step-level detail:
+If a single deployed workflow run failed or the user wants step-level detail:
 
 ```bash
-zapier-sdk --experimental get-durable-run <run-id> --json
+zapier-sdk --experimental get-workflow-run <run-id> --json
+```
+
+Use `get-durable-run <run-id>` only for one-off synthetic runs created by `zapier-sdk --experimental run-durable`, not for deployed workflow runs returned by `list-workflow-runs`.
+
+If a manual trigger response returns a trigger ID before a workflow run ID is available, bridge from trigger to run:
+
+```bash
+zapier-sdk --experimental get-trigger-run <trigger-id> --json
 ```
 
 Summarize the failure, status, timing, input, output, and any step error details that appear in the response. Avoid dumping raw JSON unless the user asks for it.
