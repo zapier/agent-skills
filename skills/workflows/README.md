@@ -4,7 +4,7 @@ Skills for setting up, building, inspecting, and modifying Zapier Workflows from
 
 ## Set Up Zapier Workflows
 
-Copy and paste this into your Cursor agent prompt:
+Copy and paste this into your agent prompt:
 
 > Install the Zapier Workflows setup skill with:
 > `npx skills add zapier/agent-skills --skill workflows-install`
