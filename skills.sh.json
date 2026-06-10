@@ -6,6 +6,7 @@
       "name": "Workflows",
       "skills": [
         "workflows-install",
+        "workflows-doctor",
         "workflows-create",
         "workflows-list",
         "workflows-history",
