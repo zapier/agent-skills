@@ -4,7 +4,10 @@ description: Install the Zapier SDK CLI for Zapier Workflows Early Access and bo
 license: MIT
 metadata:
   author: zapier
-  version: "1.0.0"
+  version: "1.1.0"
+  sdk_cli_min: "0.54.3"
+  sdk_cli_validated: "0.54.3"
+  refresh_source: "zapier/agent-skills"
 ---
 
 # Zapier Workflows Early Access Install
@@ -37,7 +40,7 @@ flowchart TD
 ## What This Installs
 
 - `@zapier/zapier-sdk-cli@latest` — public npm package that provides `zapier-sdk`, `zapier-sdk-cli`, and `zapier-sdk-experimental`. Installed globally.
-- Four companion skills installed through the `skills` CLI: `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
+- Five companion skills installed through the `skills` CLI: `workflows/doctor`, `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
 
 What this does not install:
 
@@ -244,6 +247,7 @@ Install the companion skills into the current workspace only after SDK auth and 
 Use the public `skills.sh` install path. The `npx` command runs the `skills` CLI; the skill content comes from the public `zapier/agent-skills` GitHub repo after that repo is published.
 
 ```bash
+npx skills add zapier/agent-skills --skill workflows-doctor --yes
 npx skills add zapier/agent-skills --skill workflows-create --yes
 npx skills add zapier/agent-skills --skill workflows-list --yes
 npx skills add zapier/agent-skills --skill workflows-history --yes
@@ -256,11 +260,11 @@ Verify:
 npx skills list --json
 ```
 
-Expected output should include the installed workflows companion skills: `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`.
+Expected output should include the installed workflows companion skills: `workflows-doctor`, `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`.
 
 If any companion skill is missing, rerun the specific `npx skills add ...` command and diagnose before proceeding.
 
-Updates later use the standard `skills` CLI update path:
+Updates later use the standard `skills` CLI update path. If a companion skill detects SDK/skill drift, rerun `workflows-install` or run `workflows-doctor`; those are the canonical repair paths.
 
 ```bash
 npx skills update --project
@@ -274,7 +278,7 @@ Tell the user:
 - Code Workflows experimental commands are available.
 - The authenticated Zapier account email from `zapier-sdk get-profile --json`.
 - Zapier Workflows EA access was confirmed with a read-only workflow listing.
-- Four companion workflow skills are installed: `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
+- Five companion workflow skills are installed: `workflows/doctor`, `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
 - This confirms SDK CLI install, login, Zapier Workflows EA access, and skill bootstrap. It does not yet prove that building, publishing, triggering, or running a full workflow works.
 
 Next steps for the user:

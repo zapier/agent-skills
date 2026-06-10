@@ -4,7 +4,10 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.0.0"
+  version: "1.1.0"
+  sdk_cli_min: "0.54.3"
+  sdk_cli_validated: "0.54.3"
+  refresh_source: "zapier/agent-skills"
 ---
 
 # Zapier Workflows Create
@@ -12,6 +15,10 @@ metadata:
 Create a complete durable workflow from natural language, test it when appropriate, and deploy it through the Zapier SDK experimental Code Workflows commands.
 
 Use the public SDK CLI path. Do not use `zapier-sdk-code-substrate`.
+
+## Compatibility Gate
+
+Before using this skill, run the `workflows-doctor` compatibility check for `workflows-create`. If `workflows-doctor` is not installed or cannot be loaded, run `workflows-install` or install `workflows-doctor` from `zapier/agent-skills` before continuing. If `workflows-doctor` reports SDK/skill drift, follow its refresh instructions, stop this skill invocation, reload the agent workspace if needed, and ask the user to rerun the original request.
 
 ## Prerequisites
 

@@ -4,12 +4,19 @@ description: List durable workflows in the authenticated Zapier account using th
 license: MIT
 metadata:
   author: zapier
-  version: "1.0.0"
+  version: "1.1.0"
+  sdk_cli_min: "0.54.3"
+  sdk_cli_validated: "0.54.3"
+  refresh_source: "zapier/agent-skills"
 ---
 
 # Zapier Workflows List
 
 Use the public SDK CLI experimental command surface. Do not use `zapier-sdk-code-substrate`.
+
+## Compatibility Gate
+
+Before using this skill, run the `workflows-doctor` compatibility check for `workflows-list`. If `workflows-doctor` is not installed or cannot be loaded, run `workflows-install` or install `workflows-doctor` from `zapier/agent-skills` before continuing. If `workflows-doctor` reports SDK/skill drift, follow its refresh instructions, stop this skill invocation, reload the agent workspace if needed, and ask the user to rerun the original request.
 
 ## Check Prerequisites
 
