@@ -12,7 +12,7 @@ metadata:
 
 # Zapier Workflows Doctor
 
-Diagnose whether the installed Zapier SDK CLI command surface matches the workflow skill that invoked this check. Be diagnostic first. Do not refresh skills unless SDK/skill drift is detected or compatibility cannot be confirmed.
+Diagnose whether the installed Zapier SDK CLI can support the Zapier Workflows skill bundle. Be diagnostic first. Do not refresh skills unless SDK/skill drift is detected or compatibility cannot be confirmed.
 
 ## Compatibility Metadata
 
@@ -22,21 +22,13 @@ Workflow skills use these metadata fields:
 - `sdk_cli_validated`: SDK CLI version used during the latest validation pass. Update it whenever workflow skills are intentionally tested and republished against a newer SDK CLI, even if `sdk_cli_min` does not change.
 - `refresh_source`: canonical skill source. For these skills, keep this as `zapier/agent-skills`.
 
-Command-surface checks verify required commands and flags only. They do not prove full workflow correctness or that JSON payload semantics are unchanged.
+Command-surface checks verify required bundle capabilities only. They do not prove full workflow correctness or that JSON payload semantics are unchanged.
 
-## Step 1: Identify The Profile
+## Step 1: Check Bundle Compatibility
 
-Use the profile requested by the calling skill. Valid profiles:
+Check the workflow skill bundle as one unit. Do not maintain separate compatibility checks for `workflows-install`, `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`; users will normally use these skills together, and drift in any core workflow SDK surface should refresh the whole bundle.
 
-- `workflows-install`
-- `workflows-create`
-- `workflows-list`
-- `workflows-history`
-- `workflows-modify`
-
-If no profile is provided, ask which workflow skill should be checked before continuing.
-
-Current profiles use `sdk_cli_min: "0.54.3"` and `sdk_cli_validated: "0.54.3"` unless the calling skill's metadata says otherwise.
+Current workflow skills use `sdk_cli_min: "0.54.3"` and `sdk_cli_validated: "0.54.3"` unless the installed skills' metadata says otherwise.
 
 ## Step 2: Check SDK CLI Versions
 
@@ -48,7 +40,7 @@ zapier-sdk --version
 npm view @zapier/zapier-sdk-cli version
 ```
 
-If `zapier-sdk` is missing or `zapier-sdk --version` is below this profile's `sdk_cli_min`, update the SDK CLI before continuing:
+If `zapier-sdk` is missing or `zapier-sdk --version` is below the bundle's `sdk_cli_min`, update the SDK CLI before continuing:
 
 ```bash
 npm install -g @zapier/zapier-sdk-cli@latest
@@ -57,92 +49,76 @@ zapier-sdk --version
 
 If global npm installs fail because of permissions, tell the user to fix their Node/npm setup before retrying. Prefer a user-owned Node install through nvm or Homebrew over `sudo npm install -g`.
 
-If the installed SDK CLI version is newer than this profile's `sdk_cli_validated`, continue to command-surface checks. Do not refresh skills solely because the SDK CLI is newer.
+If the installed SDK CLI version is newer than the bundle's `sdk_cli_validated`, continue to command-surface discovery. Do not refresh skills solely because the SDK CLI is newer.
 
-## Step 3: Run Command-Surface Checks
+## Step 3: Discover Current Command Surface
 
-Run only the checks for the selected profile.
-
-### `workflows-install`
+Start from the SDK help output:
 
 ```bash
 zapier-sdk --experimental --help
-zapier-sdk --experimental create-workflow --help
-zapier-sdk --experimental publish-workflow-version --help
-zapier-sdk --experimental run-durable --help
-zapier-sdk --experimental list-triggers --help
-zapier-sdk --experimental get-workflow-run --help
-zapier-sdk --experimental trigger-workflow --help
 ```
 
-Required command output:
+Use the help output to discover the current command names and flags for the required bundle capabilities below. Current command names in this skill are examples from the SDK CLI version the workflow skill bundle was validated against; they are not the compatibility contract. If the current help output exposes an equivalent way to perform a required capability, use the current help output.
 
-- `create-workflow --help` includes `--is_private`.
-- `publish-workflow-version --help` includes `--connections`, `--app_versions`, and `--trigger`.
-- `run-durable --help` includes `--connections` and `--private`.
-- `list-triggers --help` succeeds.
-- `get-workflow-run --help` succeeds.
-- `trigger-workflow --help` includes `--input`.
+For each discovered candidate command, inspect command-specific help:
 
-### `workflows-create`
+```bash
+zapier-sdk --experimental <candidate-command> --help
+```
+
+## Required Bundle Capabilities
+
+Confirm that the SDK CLI exposes a clear way to perform these operations for the workflow skill bundle:
+
+- Create a workflow container.
+- Publish a workflow version.
+- Run a durable workflow locally or synthetically.
+- List workflows.
+- List workflow runs.
+- Inspect a workflow run.
+- Discover or list app triggers.
+- Trigger a workflow.
+- Control workflow visibility, including private workflow creation or the current equivalent.
+- Bind app connections for test runs and published workflow versions.
+- Bind app implementation/version metadata when required.
+- Provide trigger configuration for published workflow versions.
+- Pass workflow input when running or triggering workflows.
+- Control enabled state when publishing workflow versions.
+- Run synthetic durable tests privately or with the current equivalent behavior.
+
+When the current SDK help output is clear, prefer it over the example commands below. If discovery is ambiguous or a required capability appears absent, treat compatibility as unconfirmed and refresh the workflow skill bundle.
+
+Example commands from the validated SDK CLI surface:
 
 ```bash
 zapier-sdk --experimental create-workflow --help
 zapier-sdk --experimental publish-workflow-version --help
 zapier-sdk --experimental run-durable --help
-zapier-sdk --experimental list-triggers --help
-zapier-sdk --experimental trigger-workflow --help
-```
-
-Required command output:
-
-- `create-workflow --help` includes `--is_private`.
-- `publish-workflow-version --help` includes `--connections`, `--app_versions`, and `--trigger`.
-- `run-durable --help` includes `--connections` and `--private`.
-- `list-triggers --help` succeeds.
-- `trigger-workflow --help` includes `--input`.
-
-### `workflows-list`
-
-```bash
-zapier-sdk --experimental list-workflows --help
-zapier-sdk --experimental list-workflow-runs --help
-```
-
-Both commands must succeed.
-
-### `workflows-history`
-
-```bash
 zapier-sdk --experimental list-workflows --help
 zapier-sdk --experimental list-workflow-runs --help
 zapier-sdk --experimental get-workflow-run --help
+zapier-sdk --experimental list-triggers --help
+zapier-sdk --experimental trigger-workflow --help
 zapier-sdk --experimental get-trigger-run --help
-```
-
-All commands must succeed.
-
-### `workflows-modify`
-
-```bash
 zapier-sdk --experimental get-workflow --help
 zapier-sdk --experimental get-workflow-version --help
-zapier-sdk --experimental publish-workflow-version --help
-zapier-sdk --experimental run-durable --help
 ```
 
-Required command output:
+Example flags from the validated SDK CLI surface:
 
-- `publish-workflow-version --help` includes `--connections`, `--app_versions`, and `--trigger`.
-- `run-durable --help` includes `--connections` and `--private`.
-- `get-workflow --help` succeeds.
-- `get-workflow-version --help` succeeds.
+- `create-workflow`: `--is_private`
+- `publish-workflow-version`: `--connections`, `--app_versions`, `--trigger`, `--enabled`
+- `run-durable`: `--connections`, `--input`, `--private`
+- `trigger-workflow`: `--input`
+
+Equivalent current flags or command shapes are acceptable if the help text clearly supports the same required bundle capability.
 
 ## Step 4: Decide Whether To Refresh Skills
 
-If all required command-surface checks pass, tell the calling skill to continue without refreshing.
+If all required bundle capabilities are confirmed, tell the calling skill to continue without refreshing.
 
-If any required command or flag is missing, or compatibility cannot be confirmed, update the entire workflow skill bundle so the skills stay in sync.
+If any required capability is missing, or compatibility cannot be confirmed, update the entire workflow skill bundle so the skills stay in sync.
 
 Prefer the standard day-2 update path first:
 
