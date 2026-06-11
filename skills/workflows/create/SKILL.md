@@ -173,7 +173,9 @@ If you add a build script, use `--skipLibCheck` for now to avoid type-check fail
 - Import `createZapierSdk` from `@zapier/zapier-sdk`.
 - Use Zod for input validation when the workflow has input.
 - Keep external side effects inside `ctx.step` calls.
-- Keep deterministic input validation, branching, and data shaping outside `ctx.step` calls.
+- Keep validation, simple guards, incidental formatting, and final return object construction outside `ctx.step` calls.
+- Use named `ctx.step` calls for user-meaningful checks, filters, transforms, and prepared inputs when those stages should appear in the editor diagram.
+- Create the SDK client inside the app-action `ctx.step` callback, then return `sdk.runAction(...)` directly from that callback. This keeps SDK initialization inside the durable runtime's guarded step execution while preserving an action shape the editor can recognize.
 - Use connection aliases, not raw connection IDs, inside workflow code.
 - Normalize manual input before Zod validation. In the current `run-durable` path, input may arrive as a JSON string rather than an already-parsed object.
 
@@ -193,6 +195,61 @@ Then parse the normalized value:
 ```typescript
 const input = InputSchema.parse(normalizeInput(rawInput));
 ```
+
+### Visualizer-Friendly Structure
+
+Generate durable source that the editor can turn into a meaningful step graph. Use ordinary code for incidental implementation details, but make user-meaningful workflow stages visible as named `ctx.step`s.
+
+Use visible steps for stages such as:
+
+- Checking whether a record should continue.
+- Preparing the input for a downstream app action.
+- Normalizing a customer-facing payload before sending it to an app.
+
+Keep ordinary code outside steps for details such as:
+
+- Zod parsing and input normalization.
+- Null coalescing and small string formatting.
+- Simple guards and final return object construction.
+
+Prefer the starter-workflow-compatible `defineDurable(name, run)` form as the default. Object-form `defineDurable({ name, description, run })` is acceptable when the workflow needs object-form metadata; object form is not known to be inherently unvisualizable.
+
+Default to this parser-friendly action shape:
+
+```typescript
+const workflow = defineDurable<Input, unknown>(
+  "example-workflow",
+  async (ctx, input) => {
+    const shouldContinue = await ctx.step("check-input", async () => {
+      return input.reaction === "todo";
+    });
+
+    if (!shouldContinue) {
+      return { skipped: true };
+    }
+
+    const taskInput = await ctx.step("prepare-task-input", async () => {
+      return buildTaskInput(input);
+    });
+
+    const createdTask = await ctx.step("create-todoist-task", async () => {
+      const sdk = createZapierSdk();
+
+      return sdk.runAction({
+        appKey: "TodoistV2CLIAPI",
+        actionType: "write",
+        actionKey: "new_task",
+        connection: "todoist_primary",
+        inputs: taskInput,
+      });
+    });
+
+    return { createdTask };
+  },
+);
+```
+
+Do not wrap every helper in a step. The goal is a useful diagram, not a box for every line of code.
 
 ## Phase 5: Test The Workflow
 
@@ -370,7 +427,14 @@ const [approvalPromise, callbackUrl] = await ctx.createCallback({
 
 await ctx.step("send-approval-request", async () => {
   const sdk = createZapierSdk();
-  // Send callbackUrl via Slack, email, or another action.
+
+  return sdk.runAction({
+    appKey: "ExampleCLIAPI",
+    actionType: "write",
+    actionKey: "send_message",
+    connection: "example_connection",
+    inputs: { callbackUrl },
+  });
 });
 
 const approval = await approvalPromise;
@@ -388,6 +452,7 @@ const results = await Promise.all(
   items.map((item, index) =>
     ctx.step(`process-item-${index}`, async () => {
       const sdk = createZapierSdk();
+
       return sdk.runAction({
         appKey: "ExampleCLIAPI",
         actionType: "write",
@@ -411,6 +476,7 @@ const result = await ctx.step({
   retryDelaySeconds: 5,
   run: async () => {
     const sdk = createZapierSdk();
+
     return sdk.runAction({
       appKey: "ExampleCLIAPI",
       actionType: "write",
