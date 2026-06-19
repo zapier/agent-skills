@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.1.0"
+  version: "1.2.0"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.54.3"
   refresh_source: "zapier/agent-skills"
@@ -98,16 +98,18 @@ For trigger-backed workflows, capture the trigger configuration for publish:
 
 ```json
 {
-  "selected_api": "GoogleSheetsAPI",
+  "selected_api": "GoogleSheetsAPI@2.3.0",
   "action": "new_row",
   "authentication_id": "connection-id-or-null",
   "params": {}
 }
 ```
 
-Use the selected app/API identifier for `selected_api`, the trigger action key for `action`, the trigger source connection ID for `authentication_id` when the trigger requires auth, and trigger input values for `params`. Omit optional fields only when the trigger does not need them.
+Use the version-pinned app/API identifier for `selected_api`, the trigger action key for `action`, the trigger source connection ID for `authentication_id` when the trigger requires auth, and trigger input values for `params`. Omit optional fields only when the trigger does not need them.
 
-For `selected_api`, use the app/API or implementation identifier returned by SDK discovery, such as `GoogleSheetsAPI`; do not substitute a display name. If discovery only exposes an app slug and not an implementation/API identifier, use the value accepted by the trigger discovery command and record the uncertainty in the build plan before publishing.
+For `selected_api`, use the **version-pinned implementation identifier** — the `implementation_id` returned by SDK discovery (`list-apps`/`get-app`), such as `GoogleSheetsAPI@2.3.0`. Do not use the bare app key (`GoogleSheetsAPI`) and do not substitute a display name. A bare, unversioned `selected_api` makes the trigger claim **fail silently at publish**: the publish call returns success with no errors, but the workflow stays disabled and nothing surfaces the cause. If discovery only exposes a bare app slug and not a versioned `implementation_id`, treat that as a blocker and record it in the build plan before publishing — do not publish a trigger with an unversioned identifier.
+
+For `params`, match each field's `value_type` from `list-trigger-input-fields <app> <action>`. ARRAY fields must be JSON arrays (for example `"dow": ["1"]`); STRING fields must be plain strings (for example `"hod": "9:00 AM"`). Passing a scalar where an array is expected (or vice versa) fails the trigger claim the same silent way.
 
 Capture app implementation/version information from SDK discovery output when available, such as `list-apps`, `get-app`, `list-actions`, or trigger/action result metadata. Do not invent app versions. If no implementation/version binding is exposed, omit `--app_versions` rather than guessing.
 
@@ -327,11 +329,11 @@ If app implementation/version information is known, build `app_versions`:
 
 Omit the entire `--app_versions` flag when no app implementation/version binding is needed. Likewise, omit `--connections` when the workflow has no connection bindings. Do not pass placeholder text like "if needed" to the CLI.
 
-For trigger-backed workflows, build the `trigger` JSON from Phase 2:
+For trigger-backed workflows, build the `trigger` JSON from Phase 2. Keep `selected_api` version-pinned to the `implementation_id` (for example `GoogleSheetsAPI@2.3.0`) and keep each `params` field shaped to its `value_type` (see Phase 2) — a bare app key or a wrong param shape makes the trigger claim fail silently at publish:
 
 ```json
 {
-  "selected_api": "GoogleSheetsAPI",
+  "selected_api": "GoogleSheetsAPI@2.3.0",
   "action": "new_row",
   "authentication_id": "connection-id-or-null",
   "params": {}
@@ -376,6 +378,14 @@ zapier-sdk --experimental get-workflow <workflow-id> --json
 zapier-sdk --experimental list-workflow-versions <workflow-id> --json
 zapier-sdk --experimental get-workflow-version <workflow-id> <version-id> --json
 ```
+
+For trigger-backed workflows, verify the trigger actually claimed. The claim is asynchronous and can fail silently, so re-read the workflow (allow a few seconds; poll if needed) and confirm it is enabled:
+
+```bash
+zapier-sdk --experimental get-workflow <workflow-id> --json
+```
+
+If `enabled` is `false` even though you published with `--enabled`, the trigger claim failed. The most common cause is a `selected_api` that is not version-pinned to the `implementation_id`, or a `params` field with the wrong shape (see Phase 2). Re-publish with a corrected `--trigger` and re-check. Do not report the workflow as deployed until `get-workflow` shows `enabled: true`.
 
 If manual triggering is supported for the workflow, test it only after confirming side effects with the user:
 
