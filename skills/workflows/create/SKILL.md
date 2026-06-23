@@ -173,12 +173,13 @@ If you add a build script, use `--skipLibCheck` for now to avoid type-check fail
 
 - Import `defineDurable` from `@zapier/zapier-durable`.
 - Import `createZapierSdk` from `@zapier/zapier-sdk`.
+- Create the SDK client **once at module level** — `const sdk = createZapierSdk()` above `defineDurable`. Do not call `createZapierSdk()` inside a `ctx.step` callback; an `sdk` created inside the callback is not the shape the editor recognizes as an app action (see **App-Action Step Shape (Editor Recognition)** below).
 - Use Zod for input validation when the workflow has input.
-- Keep external side effects inside `ctx.step` calls.
-- Keep validation, simple guards, incidental formatting, and final return object construction outside `ctx.step` calls.
-- Use named `ctx.step` calls for user-meaningful checks, filters, transforms, and prepared inputs when those stages should appear in the editor diagram.
-- Create the SDK client inside the app-action `ctx.step` callback, then return `sdk.runAction(...)` directly from that callback. This keeps SDK initialization inside the durable runtime's guarded step execution while preserving an action shape the editor can recognize.
+- Keep external side effects (app actions, fetches) inside `ctx.step` calls.
+- Make each app action exactly **one** `ctx.step` whose body is a single `return sdk.runAction({...})` call — one `runAction` per step.
+- Keep validation, input normalization, simple guards, data shaping, and final return object construction **outside** `ctx.step` calls.
 - Use connection aliases, not raw connection IDs, inside workflow code.
+- Reference a prior step's output with `stepVar.data[0].field` for the first result, or `stepVar.data` for the whole array.
 - Normalize manual input before Zod validation. In the current `run-durable` path, input may arrive as a JSON string rather than an already-parsed object.
 
 Use this helper pattern for workflows with input:
