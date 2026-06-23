@@ -142,7 +142,7 @@ get-workflow-run
 
 The command-specific help must expose the flags the companion skills depend on:
 
-- `create-workflow --help` includes `--is_private`.
+- `create-workflow --help` includes `--private`.
 - `publish-workflow-version --help` includes `--connections`, `--app_versions`, and `--trigger`.
 - `run-durable --help` includes `--connections` and `--private`.
 - `list-triggers --help` succeeds.
