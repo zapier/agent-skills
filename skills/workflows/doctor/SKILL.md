@@ -107,7 +107,7 @@ zapier-sdk --experimental get-workflow-version --help
 
 Example flags from the validated SDK CLI surface:
 
-- `create-workflow`: `--is_private`
+- `create-workflow`: `--private`
 - `publish-workflow-version`: `--connections`, `--app_versions`, `--trigger`, `--enabled`
 - `run-durable`: `--connections`, `--input`, `--private`
 - `trigger-workflow`: `--input`

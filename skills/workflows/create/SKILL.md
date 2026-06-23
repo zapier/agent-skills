@@ -302,11 +302,11 @@ Create a private workflow container:
 ```bash
 zapier-sdk --experimental create-workflow "<workflow-name>" \
   --description "<brief description>" \
-  --is_private \
+  --private \
   --json
 ```
 
-Omit `--is_private` only if the user explicitly wants the workflow visible to the broader account.
+Omit `--private` only if the user explicitly wants the workflow visible to the broader account.
 
 Capture the returned workflow ID. Then publish the version. The current SDK CLI expects `source_files` as a JSON object, not a path to `workflow.ts`.
 
