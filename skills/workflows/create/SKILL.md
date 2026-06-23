@@ -453,17 +453,15 @@ const [approvalPromise, callbackUrl] = await ctx.createCallback({
   timeoutSeconds: 86400,
 });
 
-await ctx.step("send-approval-request", async () => {
-  const sdk = createZapierSdk();
-
-  return sdk.runAction({
+await ctx.step("send-approval-request", async () =>
+  sdk.runAction({
     appKey: "ExampleCLIAPI",
     actionType: "write",
     actionKey: "send_message",
     connection: "example_connection",
     inputs: { callbackUrl },
-  });
-});
+  }),
+);
 
 const approval = await approvalPromise;
 if (!approval.approved) {
@@ -478,20 +476,20 @@ Use `Promise.all()` outside `ctx.step`; each iteration creates its own step:
 ```typescript
 const results = await Promise.all(
   items.map((item, index) =>
-    ctx.step(`process-item-${index}`, async () => {
-      const sdk = createZapierSdk();
-
-      return sdk.runAction({
+    ctx.step(`process-item-${index}`, async () =>
+      sdk.runAction({
         appKey: "ExampleCLIAPI",
         actionType: "write",
         actionKey: "do_something",
         connection: "example_connection",
         inputs: { item },
-      });
-    }),
+      }),
+    ),
   ),
 );
 ```
+
+The template-literal step id (`` `process-item-${index}` ``) is not a string literal, so the editor renders these fan-out steps as code steps rather than app-action steps (see **App-Action Step Shape (Editor Recognition)**). Use this pattern for runtime fan-out; when you need each app action to show its app icon, write separate steps with string-literal ids instead.
 
 ### Error Handling
 
@@ -502,17 +500,14 @@ const result = await ctx.step({
   name: "flaky-api-call",
   maxAttempts: 3,
   retryDelaySeconds: 5,
-  run: async () => {
-    const sdk = createZapierSdk();
-
-    return sdk.runAction({
+  run: async () =>
+    sdk.runAction({
       appKey: "ExampleCLIAPI",
       actionType: "write",
       actionKey: "do_something",
       connection: "example_connection",
       inputs: {},
-    });
-  },
+    }),
 });
 ```
 
