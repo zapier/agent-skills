@@ -201,58 +201,75 @@ const input = InputSchema.parse(normalizeInput(rawInput));
 
 ### Visualizer-Friendly Structure
 
-Generate durable source that the editor can turn into a meaningful step graph. Use ordinary code for incidental implementation details, but make user-meaningful workflow stages visible as named `ctx.step`s.
+Generate durable source the editor can turn into a meaningful step graph. An app action becomes an app-action step (with the app icon) only when it is a pure, single-`runAction` step (see **App-Action Step Shape (Editor Recognition)** below). Everything else — validation, input normalization, data shaping, guards, and the final return object — stays as plain code.
 
-Use visible steps for stages such as:
+You may still expose a user-meaningful non-app stage (for example a record check, or a prepared payload) as a named `ctx.step`. Such a step has no `sdk.runAction` call, so the editor renders it as a **code step** by design — that is the correct rendering for a non-app stage, not a regression. Use a visible non-app step only when the box genuinely helps the reader; otherwise keep that logic in plain code.
 
-- Checking whether a record should continue.
-- Preparing the input for a downstream app action.
-- Normalizing a customer-facing payload before sending it to an app.
+Prefer the starter-workflow-compatible `defineDurable(name, run)` form as the default. Object-form `defineDurable({ name, description, run })` is acceptable when the workflow needs object-form metadata.
 
-Keep ordinary code outside steps for details such as:
-
-- Zod parsing and input normalization.
-- Null coalescing and small string formatting.
-- Simple guards and final return object construction.
-
-Prefer the starter-workflow-compatible `defineDurable(name, run)` form as the default. Object-form `defineDurable({ name, description, run })` is acceptable when the workflow needs object-form metadata; object form is not known to be inherently unvisualizable.
-
-Default to this parser-friendly action shape:
+Default to this parser-friendly shape — note the **module-level** `sdk`, the hoisted app-key/connection constants, and the bare `runAction` body of the app-action step:
 
 ```typescript
+import { defineDurable } from "@zapier/zapier-durable";
+import { createZapierSdk } from "@zapier/zapier-sdk";
+import { z } from "zod";
+
+const sdk = createZapierSdk();
+
+const InputSchema = z.object({ reaction: z.string() });
+type Input = z.infer<typeof InputSchema>;
+
+const TODOIST_APP_KEY = "TodoistV2CLIAPI";
+const TODOIST_CONNECTION = "todoist_primary";
+
 const workflow = defineDurable<Input, unknown>(
   "example-workflow",
   async (ctx, input) => {
-    const shouldContinue = await ctx.step("check-input", async () => {
-      return input.reaction === "todo";
-    });
-
-    if (!shouldContinue) {
+    // Plain code: guard outside any step.
+    if (input.reaction !== "todo") {
       return { skipped: true };
     }
 
-    const taskInput = await ctx.step("prepare-task-input", async () => {
-      return buildTaskInput(input);
-    });
+    // Plain code: shape the action input outside the step.
+    const taskInput = buildTaskInput(input);
 
-    const createdTask = await ctx.step("create-todoist-task", async () => {
-      const sdk = createZapierSdk();
-
-      return sdk.runAction({
-        appKey: "TodoistV2CLIAPI",
+    // App action: one runAction, object literal, module-level sdk.
+    const createdTask = await ctx.step("create-todoist-task", async () =>
+      sdk.runAction({
+        appKey: TODOIST_APP_KEY,
         actionType: "write",
         actionKey: "new_task",
-        connection: "todoist_primary",
+        connection: TODOIST_CONNECTION,
         inputs: taskInput,
-      });
-    });
+      }),
+    );
 
     return { createdTask };
   },
 );
 ```
 
-Do not wrap every helper in a step. The goal is a useful diagram, not a box for every line of code.
+Do not wrap every helper in a step, and do not put data shaping inside an app-action step. The goal is a useful diagram where each app action carries its app icon — not a box for every line of code.
+
+### App-Action Step Shape (Editor Recognition)
+
+The editor parses each `ctx.step` to decide whether it renders as an **app-action step** (with the app icon) or a generic **code step**. To render as an app action, a step must satisfy **all** of these:
+
+- **String-literal step id** — `ctx.step("create-todoist-task", ...)`. Object form `ctx.step({ name: "create-todoist-task", run })` is also recognized.
+- **Inline callback** — an `async () => ...` arrow or `async function () { ... }` written in place, never a named function reference.
+- **Exactly one `sdk.runAction(...)` call** in the body, on the **module-level** `sdk` client.
+- **Object-literal argument** to `runAction` (or a `const` that resolves to one) providing `appKey`, `actionType`, and `actionKey`. (The `app` / `action` spellings are also accepted.)
+
+A step is **demoted to a code step** (no app icon) when any of these is true:
+
+- The step id is not a string literal (a variable, a function call, or a template such as `` `process-item-${index}` ``).
+- The callback is a named reference instead of an inline function.
+- The body has **zero** `sdk.runAction` calls — a pure transform/prep step. This renders as a code step by design; it is not an app action.
+- The body has **more than one** `sdk.runAction` call.
+- `runAction` is called on something other than the module-level `sdk` (for example an `sdk` created inside the callback).
+- `appKey`, `actionType`, or `actionKey` is missing.
+
+When in doubt, keep the app-action step to a single `return sdk.runAction({ appKey, actionType, actionKey, connection, inputs })` and move everything else out of the step.
 
 ## Phase 5: Test The Workflow
 
