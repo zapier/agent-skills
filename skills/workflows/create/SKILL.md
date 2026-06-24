@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.2.0"
+  version: "1.3.0"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.54.3"
   refresh_source: "zapier/agent-skills"
@@ -173,12 +173,13 @@ If you add a build script, use `--skipLibCheck` for now to avoid type-check fail
 
 - Import `defineDurable` from `@zapier/zapier-durable`.
 - Import `createZapierSdk` from `@zapier/zapier-sdk`.
+- Create the SDK client once at module level: `const sdk = createZapierSdk()` above `defineDurable`
 - Use Zod for input validation when the workflow has input.
-- Keep external side effects inside `ctx.step` calls.
-- Keep validation, simple guards, incidental formatting, and final return object construction outside `ctx.step` calls.
-- Use named `ctx.step` calls for user-meaningful checks, filters, transforms, and prepared inputs when those stages should appear in the editor diagram.
-- Create the SDK client inside the app-action `ctx.step` callback, then return `sdk.runAction(...)` directly from that callback. This keeps SDK initialization inside the durable runtime's guarded step execution while preserving an action shape the editor can recognize.
+- Keep external side effects (app actions, fetches) inside `ctx.step` calls.
+- Make each app action exactly **one** `ctx.step` whose body is a single `return sdk.runAction({...})` call — one `runAction` per step.
+- Group validation, input normalization, simple guards, data shaping into steps as needed.
 - Use connection aliases, not raw connection IDs, inside workflow code.
+- Reference a prior step's output with `stepVar.data[0].field` for the first result, or `stepVar.data` for the whole array.
 - Normalize manual input before Zod validation. In the current `run-durable` path, input may arrive as a JSON string rather than an already-parsed object.
 
 Use this helper pattern for workflows with input:
@@ -200,58 +201,55 @@ const input = InputSchema.parse(normalizeInput(rawInput));
 
 ### Visualizer-Friendly Structure
 
-Generate durable source that the editor can turn into a meaningful step graph. Use ordinary code for incidental implementation details, but make user-meaningful workflow stages visible as named `ctx.step`s.
+Generate durable source that can be turned into a meaningful step graph. Avoid overly dynamic construction.
 
-Use visible steps for stages such as:
-
-- Checking whether a record should continue.
-- Preparing the input for a downstream app action.
-- Normalizing a customer-facing payload before sending it to an app.
-
-Keep ordinary code outside steps for details such as:
-
-- Zod parsing and input normalization.
-- Null coalescing and small string formatting.
-- Simple guards and final return object construction.
-
-Prefer the starter-workflow-compatible `defineDurable(name, run)` form as the default. Object-form `defineDurable({ name, description, run })` is acceptable when the workflow needs object-form metadata; object form is not known to be inherently unvisualizable.
-
-Default to this parser-friendly action shape:
+Default to this parser-friendly shape — module-level `sdk`, hoisted app-key/connection constants, and a bare `runAction` body for each app action:
 
 ```typescript
+import { defineDurable } from "@zapier/zapier-durable";
+import { createZapierSdk } from "@zapier/zapier-sdk";
+import { z } from "zod";
+
+const sdk = createZapierSdk();
+
+const InputSchema = z.object({ reaction: z.string() });
+type Input = z.infer<typeof InputSchema>;
+
+const TODOIST_APP_KEY = "TodoistV2CLIAPI";
+const TODOIST_CONNECTION = "todoist_primary";
+
 const workflow = defineDurable<Input, unknown>(
   "example-workflow",
   async (ctx, input) => {
-    const shouldContinue = await ctx.step("check-input", async () => {
-      return input.reaction === "todo";
-    });
-
-    if (!shouldContinue) {
+    // Plain code: guard outside any step.
+    if (input.reaction !== "todo") {
       return { skipped: true };
     }
 
-    const taskInput = await ctx.step("prepare-task-input", async () => {
-      return buildTaskInput(input);
-    });
+    // Plain code: shape the action input outside the step.
+    const taskInput = buildTaskInput(input);
 
-    const createdTask = await ctx.step("create-todoist-task", async () => {
-      const sdk = createZapierSdk();
-
-      return sdk.runAction({
-        appKey: "TodoistV2CLIAPI",
+    // App action: one runAction, object literal, module-level sdk.
+    const createdTask = await ctx.step("create-todoist-task", async () =>
+      sdk.runAction({
+        appKey: TODOIST_APP_KEY,
         actionType: "write",
         actionKey: "new_task",
-        connection: "todoist_primary",
+        connection: TODOIST_CONNECTION,
         inputs: taskInput,
-      });
-    });
+      }),
+    );
 
     return { createdTask };
   },
 );
 ```
 
-Do not wrap every helper in a step. The goal is a useful diagram, not a box for every line of code.
+### App-Action Step Shape (Editor Recognition)
+
+The editor renders a `ctx.step` as an **app-action step** (with the app icon) when its body is a single `sdk.runAction({...})` call with `appKey`, `actionType`, and `actionKey` (object literal, or a `const` that resolves to one; the `app` / `action` spellings also work). A string-literal step id (`ctx.step("create-todoist-task", ...)`) and an inline `async () => ...` callback are the recognized form; object form `ctx.step({ name, run })` works too.
+
+Other steps render as plain **code steps** — for example a step with no `runAction`, or with more than one, or one created in a loop with a dynamic id (`` `process-item-${index}` ``). That is expected, not a regression; loops and fan-out legitimately need dynamic ids.
 
 ## Phase 5: Test The Workflow
 
@@ -435,17 +433,15 @@ const [approvalPromise, callbackUrl] = await ctx.createCallback({
   timeoutSeconds: 86400,
 });
 
-await ctx.step("send-approval-request", async () => {
-  const sdk = createZapierSdk();
-
-  return sdk.runAction({
+await ctx.step("send-approval-request", async () =>
+  sdk.runAction({
     appKey: "ExampleCLIAPI",
     actionType: "write",
     actionKey: "send_message",
     connection: "example_connection",
     inputs: { callbackUrl },
-  });
-});
+  }),
+);
 
 const approval = await approvalPromise;
 if (!approval.approved) {
@@ -460,20 +456,20 @@ Use `Promise.all()` outside `ctx.step`; each iteration creates its own step:
 ```typescript
 const results = await Promise.all(
   items.map((item, index) =>
-    ctx.step(`process-item-${index}`, async () => {
-      const sdk = createZapierSdk();
-
-      return sdk.runAction({
+    ctx.step(`process-item-${index}`, async () =>
+      sdk.runAction({
         appKey: "ExampleCLIAPI",
         actionType: "write",
         actionKey: "do_something",
         connection: "example_connection",
         inputs: { item },
-      });
-    }),
+      }),
+    ),
   ),
 );
 ```
+
+Loop/fan-out steps use a dynamic id (`` `process-item-${index}` ``), so the editor renders them as code steps — expected for this pattern (see **App-Action Step Shape (Editor Recognition)**).
 
 ### Error Handling
 
@@ -484,17 +480,14 @@ const result = await ctx.step({
   name: "flaky-api-call",
   maxAttempts: 3,
   retryDelaySeconds: 5,
-  run: async () => {
-    const sdk = createZapierSdk();
-
-    return sdk.runAction({
+  run: async () =>
+    sdk.runAction({
       appKey: "ExampleCLIAPI",
       actionType: "write",
       actionKey: "do_something",
       connection: "example_connection",
       inputs: {},
-    });
-  },
+    }),
 });
 ```
 
