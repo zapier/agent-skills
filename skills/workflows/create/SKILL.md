@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.3.3"
+  version: "1.3.4"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.59.3"
   refresh_source: "zapier/agent-skills"
@@ -291,12 +291,12 @@ Build `source_files` from `workflow.ts`:
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
 ```
 
-Build the run-only `connections` JSON from the selected aliases. For `run-durable`, aliases map directly to connection IDs:
+Build the `connections` JSON from the selected aliases. It's a nested object — each alias maps to an object holding a `connectionId` (never a bare string). The same shape is used for `publish-workflow-version` in Phase 6:
 
 ```json
 {
-  "slack_work": "12345678",
-  "gmail_primary": "87654321"
+  "slack_work": { "connectionId": "12345678" },
+  "gmail_primary": { "connectionId": "87654321" }
 }
 ```
 
@@ -340,12 +340,12 @@ Omit `--private` only if the user explicitly wants the workflow visible to the b
 
 Capture the returned workflow ID. Then publish the version. The current SDK CLI expects `source_files` as a JSON object, not a path to `workflow.ts`.
 
-For publish, build connection bindings with the nested shape expected by `publish-workflow-version`:
+For publish, use the same nested `connections` shape as `run-durable` — each alias maps to an object holding a `connectionId`:
 
 ```json
 {
-  "slack_work": { "connection_id": "123-or-uuid" },
-  "gmail_primary": { "connection_id": "456-or-uuid" }
+  "slack_work": { "connectionId": "123-or-uuid" },
+  "gmail_primary": { "connectionId": "456-or-uuid" }
 }
 ```
 
