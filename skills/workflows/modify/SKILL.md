@@ -4,7 +4,7 @@ description: Modify and republish an existing durable workflow using the Zapier 
 license: MIT
 metadata:
   author: zapier
-  version: "1.1.0"
+  version: "1.1.1"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.54.3"
   refresh_source: "zapier/agent-skills"
@@ -77,12 +77,12 @@ Run the workflow:
 zapier-sdk --experimental run-durable "$SOURCE_FILES" \
   --dependencies '<deps from fetched version>' \
   --zapier_durable_version '<durable version from fetched version>' \
-  --connections '<run-durable alias-to-connection-id JSON if needed>' \
+  --connections '<connection bindings JSON if needed>' \
   --input '<synthetic input JSON>' \
   --private
 ```
 
-For synthetic `run-durable` tests, convert publish connection bindings into the run-only alias-to-connection-id shape. Do not pass nested publish bindings like `{ "alias": { "connection_id": "..." } }` to `run-durable`.
+For synthetic `run-durable` tests, reuse the fetched version's connection bindings as-is — they're already the nested object shape `{ "alias": { "connectionId": "..." } }` that both `run-durable` and `publish-workflow-version` accept. Do not flatten to a bare string like `{ "alias": "id" }`; that fails with `expected object, received string`.
 
 If the run returns a run ID, inspect it when needed:
 
