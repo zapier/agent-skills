@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.3.0"
+  version: "1.3.1"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.54.3"
   refresh_source: "zapier/agent-skills"
@@ -202,6 +202,14 @@ const input = InputSchema.parse(normalizeInput(rawInput));
 ### Visualizer-Friendly Structure
 
 Generate durable source that can be turned into a meaningful step graph. Avoid overly dynamic construction.
+
+**`defineDurable` call shape — every call must resolve `run` to a function.** Use either the bare form `defineDurable("workflow-name", async (ctx, input) => { ... })` or the object form `defineDurable({ name: "workflow-name", inputSchema, outputSchema, description, run: async (ctx, input) => { ... } })`. `ctx` is always the first parameter of `run`; `input` is the optional second parameter, so `async (ctx) => { ... }` is also valid. These shapes are invalid and make the workflow fail on its first run with `durable.run is not a function`:
+
+- `defineDurable(async (ctx, input) => { ... })` — a bare function with no name. The function is treated as an options object, so `run` is never set. This is the most common mistake.
+- `defineDurable({ name: "workflow-name" })` — object missing `run`.
+- `defineDurable({ name: "workflow-name", run: someNonFunction })` — `run` is not a function.
+
+`durable.run is not a function` is a code-shape defect in your `defineDurable` call, not a version mismatch. Do not change the pinned `@zapier/zapier-durable` or `@zapier/zapier-sdk` versions to fix it — correct the call so it passes a `name` and a `run` function.
 
 Default to this parser-friendly shape — module-level `sdk`, hoisted app-key/connection constants, and a bare `runAction` body for each app action:
 
