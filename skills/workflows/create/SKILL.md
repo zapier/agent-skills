@@ -201,13 +201,9 @@ const input = InputSchema.parse(normalizeInput(rawInput));
 
 ### Visualizer-Friendly Structure
 
-Generate durable source the editor can turn into a meaningful step graph. An app action becomes an app-action step (with the app icon) only when it is a pure, single-`runAction` step (see **App-Action Step Shape (Editor Recognition)** below). Everything else — validation, input normalization, data shaping, guards, and the final return object — stays as plain code.
+Generate durable source that can be turned into a meaningful step graph. Avoid overly dynamic construction.
 
-You may still expose a user-meaningful non-app stage (for example a record check, or a prepared payload) as a named `ctx.step`. Such a step has no `sdk.runAction` call, so the editor renders it as a **code step** by design — that is the correct rendering for a non-app stage, not a regression. Use a visible non-app step only when the box genuinely helps the reader; otherwise keep that logic in plain code.
-
-Prefer the starter-workflow-compatible `defineDurable(name, run)` form as the default. Object-form `defineDurable({ name, description, run })` is acceptable when the workflow needs object-form metadata.
-
-Default to this parser-friendly shape — note the **module-level** `sdk`, the hoisted app-key/connection constants, and the bare `runAction` body of the app-action step:
+Default to this parser-friendly shape — module-level `sdk`, hoisted app-key/connection constants, and a bare `runAction` body for each app action:
 
 ```typescript
 import { defineDurable } from "@zapier/zapier-durable";
@@ -249,27 +245,11 @@ const workflow = defineDurable<Input, unknown>(
 );
 ```
 
-Do not wrap every helper in a step, and do not put data shaping inside an app-action step. The goal is a useful diagram where each app action carries its app icon — not a box for every line of code.
-
 ### App-Action Step Shape (Editor Recognition)
 
-The editor parses each `ctx.step` to decide whether it renders as an **app-action step** (with the app icon) or a generic **code step**. To render as an app action, a step must satisfy **all** of these:
+The editor renders a `ctx.step` as an **app-action step** (with the app icon) when its body is a single `sdk.runAction({...})` call with `appKey`, `actionType`, and `actionKey` (object literal, or a `const` that resolves to one; the `app` / `action` spellings also work). A string-literal step id (`ctx.step("create-todoist-task", ...)`) and an inline `async () => ...` callback are the recognized form; object form `ctx.step({ name, run })` works too.
 
-- **String-literal step id** — `ctx.step("create-todoist-task", ...)`. Object form `ctx.step({ name: "create-todoist-task", run })` is also recognized.
-- **Inline callback** — an `async () => ...` arrow or `async function () { ... }` written in place, never a named function reference.
-- **Exactly one `sdk.runAction(...)` call** in the body, on the **module-level** `sdk` client.
-- **Object-literal argument** to `runAction` (or a `const` that resolves to one) providing `appKey`, `actionType`, and `actionKey`. (The `app` / `action` spellings are also accepted.)
-
-A step is **demoted to a code step** (no app icon) when any of these is true:
-
-- The step id is not a string literal (a variable, a function call, or a template such as `` `process-item-${index}` ``).
-- The callback is a named reference instead of an inline function.
-- The body has **zero** `sdk.runAction` calls — a pure transform/prep step. This renders as a code step by design; it is not an app action.
-- The body has **more than one** `sdk.runAction` call.
-- `runAction` is called on something other than the module-level `sdk` (for example an `sdk` created inside the callback).
-- `appKey`, `actionType`, or `actionKey` is missing.
-
-When in doubt, keep the app-action step to a single `return sdk.runAction({ appKey, actionType, actionKey, connection, inputs })` and move everything else out of the step.
+Other steps render as plain **code steps** — for example a step with no `runAction`, or with more than one, or one created in a loop with a dynamic id (`` `process-item-${index}` ``). That is expected, not a regression; loops and fan-out legitimately need dynamic ids.
 
 ## Phase 5: Test The Workflow
 
@@ -489,7 +469,7 @@ const results = await Promise.all(
 );
 ```
 
-The template-literal step id (`` `process-item-${index}` ``) is not a string literal, so the editor renders these fan-out steps as code steps rather than app-action steps (see **App-Action Step Shape (Editor Recognition)**). Use this pattern for runtime fan-out; when you need each app action to show its app icon, write separate steps with string-literal ids instead.
+Loop/fan-out steps use a dynamic id (`` `process-item-${index}` ``), so the editor renders them as code steps — expected for this pattern (see **App-Action Step Shape (Editor Recognition)**).
 
 ### Error Handling
 
