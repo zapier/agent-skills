@@ -177,7 +177,7 @@ If you add a build script, use `--skipLibCheck` for now to avoid type-check fail
 - Use Zod for input validation when the workflow has input.
 - Keep external side effects (app actions, fetches) inside `ctx.step` calls.
 - Make each app action exactly **one** `ctx.step` whose body is a single `return sdk.runAction({...})` call — one `runAction` per step.
-- Keep validation, input normalization, simple guards, data shaping, and final return object construction **outside** `ctx.step` calls.
+- Group validation, input normalization, simple guards, data shaping into steps as needed.
 - Use connection aliases, not raw connection IDs, inside workflow code.
 - Reference a prior step's output with `stepVar.data[0].field` for the first result, or `stepVar.data` for the whole array.
 - Normalize manual input before Zod validation. In the current `run-durable` path, input may arrive as a JSON string rather than an already-parsed object.
