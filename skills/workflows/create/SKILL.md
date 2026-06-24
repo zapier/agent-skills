@@ -173,7 +173,7 @@ If you add a build script, use `--skipLibCheck` for now to avoid type-check fail
 
 - Import `defineDurable` from `@zapier/zapier-durable`.
 - Import `createZapierSdk` from `@zapier/zapier-sdk`.
-- Create the SDK client **once at module level** — `const sdk = createZapierSdk()` above `defineDurable`. Do not call `createZapierSdk()` inside a `ctx.step` callback; an `sdk` created inside the callback is not the shape the editor recognizes as an app action (see **App-Action Step Shape (Editor Recognition)** below).
+- Create the SDK client once at module level: `const sdk = createZapierSdk()` above `defineDurable`
 - Use Zod for input validation when the workflow has input.
 - Keep external side effects (app actions, fetches) inside `ctx.step` calls.
 - Make each app action exactly **one** `ctx.step` whose body is a single `return sdk.runAction({...})` call — one `runAction` per step.
