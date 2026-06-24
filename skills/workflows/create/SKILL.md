@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.3.2"
+  version: "1.3.3"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.59.3"
   refresh_source: "zapier/agent-skills"
@@ -35,7 +35,7 @@ zapier-sdk --experimental list-triggers --help
 zapier-sdk --experimental trigger-workflow --help
 ```
 
-Pin **aged** versions, not npm-latest. The Vercel sandbox installs dependencies with `pnpm install --config.minimumReleaseAge=1440`, so any direct dependency published less than 24h ago is rejected. `@zapier/zapier-sdk` publishes often (several times a day), so its npm-latest is regularly younger than 24h. Both `@zapier/zapier-sdk` and `@zapier/zapier-durable` are direct dependencies of the sandbox install, so select the latest version of each **published at least 24h ago**. This needs only Node (already required) — no `jq` or other tooling:
+Pin **aged** versions, not npm-latest. The Vercel sandbox installs dependencies with `pnpm install --config.minimumReleaseAge=1440`, so any direct dependency published less than 24h ago is rejected. `@zapier/zapier-sdk` publishes often (several times a day), so its npm-latest is regularly younger than 24h. `@zapier/zapier-sdk`, `@zapier/zapier-durable`, and `zod` (imported by the generated `workflow.ts`) are all direct dependencies of the sandbox install, so select the latest version of each **published at least 24h ago**. This needs only Node (already required) — no `jq` or other tooling:
 
 ```bash
 SELECT_AGED_VERSION='
@@ -56,15 +56,17 @@ console.log(eligible[eligible.length - 1].v);
 '
 SDK_VERSION="$(node -e "$SELECT_AGED_VERSION" @zapier/zapier-sdk)"
 DURABLE_VERSION="$(node -e "$SELECT_AGED_VERSION" @zapier/zapier-durable)"
-echo "SDK_VERSION=$SDK_VERSION  DURABLE_VERSION=$DURABLE_VERSION"
+ZOD_VERSION="$(node -e "$SELECT_AGED_VERSION" zod)"
+echo "SDK_VERSION=$SDK_VERSION  DURABLE_VERSION=$DURABLE_VERSION  ZOD_VERSION=$ZOD_VERSION"
 ```
 
 Capture:
 
 - `SDK_VERSION` — the latest `@zapier/zapier-sdk` published at least 24h ago. Use it as the pinned SDK dependency.
 - `DURABLE_VERSION` — the latest `@zapier/zapier-durable` published at least 24h ago. Use it for the local `package.json` pin and for `--zapier-durable-version`.
+- `ZOD_VERSION` — the latest `zod` published at least 24h ago. Use it for the local `package.json` pin and in `--dependencies`, because the generated `workflow.ts` imports `zod`.
 
-Use exact versions in commands. Do not pass `latest`. Pass the aged `SDK_VERSION` to `--dependencies` and the aged `DURABLE_VERSION` to `--zapier-durable-version` (see Phases 5 and 6) — both are subject to the 24h guard.
+Use exact versions in commands. Do not pass `latest`. Pass the aged `SDK_VERSION` and `ZOD_VERSION` to `--dependencies` and the aged `DURABLE_VERSION` to `--zapier-durable-version` (see Phases 5 and 6) — all are subject to the 24h guard. **Every package the generated `workflow.ts` imports must appear in `--dependencies`**, aged-pinned: the sandbox installs from `--dependencies`, not your local `package.json`, so a missing import (such as `zod`) fails the run with `Cannot find package`.
 
 The user must also have app connections configured at https://zapier.com/app/assets/connections for any app actions the workflow will run.
 
@@ -173,7 +175,7 @@ Create a workflow directory:
   "dependencies": {
     "@zapier/zapier-sdk": "<pinned SDK version>",
     "@zapier/zapier-durable": "<pinned durable version>",
-    "zod": "latest"
+    "zod": "<pinned zod version>"
   },
   "devDependencies": {
     "typescript": "latest"
@@ -304,7 +306,7 @@ Run the durable:
 
 ```bash
 zapier-sdk --experimental run-durable "$SOURCE_FILES" \
-  --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>"}' \
+  --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
   --zapier-durable-version '<pinned durable version>' \
   --connections '<connections JSON>' \
   --input '<JSON matching input schema>' \
@@ -374,7 +376,7 @@ Publish a webhook/manual-only workflow by omitting `--trigger`:
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
 
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
-  --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>"}' \
+  --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
   --zapier-durable-version '<pinned durable version>' \
   --connections '<publish connection bindings JSON>' \
   --app_versions '<app versions JSON if needed>' \
@@ -386,7 +388,7 @@ Publish a trigger-backed workflow by adding `--trigger`:
 
 ```bash
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
-  --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>"}' \
+  --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
   --zapier-durable-version '<pinned durable version>' \
   --connections '<publish connection bindings JSON>' \
   --app_versions '<app versions JSON if needed>' \
