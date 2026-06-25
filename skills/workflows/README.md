@@ -16,11 +16,17 @@ Copy and paste this into your agent prompt:
 | Skill | Purpose |
 |---|---|
 | `workflows-install` | Set up the Zapier SDK CLI, install companion skills, authenticate, and run a read-only smoke test |
-| `workflows-doctor` | Diagnose SDK CLI and workflow skill compatibility, then refresh the workflow skill bundle when drift is detected |
+| `workflows-doctor` | Diagnose SDK CLI and workflow skill compatibility, refresh the bundle on SDK drift, and auto-update the workflow skills about once a day to pick up content-only improvements |
 | `workflows-create` | Create, test, publish, and manually trigger durable workflows |
 | `workflows-list` | List workflows visible to the authenticated Zapier account |
 | `workflows-history` | Inspect workflow run history and durable run details |
 | `workflows-modify` | Fetch, edit, test, republish, and verify existing workflows |
+
+## Daily Skill-Freshness Auto-Update
+
+`workflows-doctor` runs a soft, throttled freshness check ("Track B") before its SDK compatibility check. About once per day per project it runs `npx skills update` for the workflow bundle so content-only skill improvements — those shipped without an SDK version bump — are picked up automatically. It is non-blocking and silent unless an update is applied; updates take full effect on the next workspace reload.
+
+Throttle state lives in a per-project marker under `${XDG_CACHE_HOME:-$HOME/.cache}/zapier-workflows-doctor/` (never in your repo). On failure it retries every 15 minutes up to 3 times, then falls back to a daily retry; any success resets the budget. Set `ZAPIER_WORKFLOWS_DEBUG=1` to see its decisions on stderr.
 
 ## Maintaining SDK Compatibility Metadata
 
