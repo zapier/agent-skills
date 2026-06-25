@@ -7,15 +7,16 @@
 # never abort the worker skill that ran the doctor. Every path ends with exit 0.
 #
 # Env hooks:
-#   ZAPIER_WORKFLOWS_DEBUG=1                  verbose decision log -> stderr (bundle-wide flag)
-#   ZAPIER_WORKFLOWS_DOCTOR_NOW=<epoch>       override the clock (tests)
-#   ZAPIER_WORKFLOWS_DOCTOR_UPDATE_CMD=<cmd>  override the update command (tests)
-#   XDG_CACHE_HOME=<dir>                      override cache root (tests / XDG)
+#   ZAPIER_WORKFLOWS_DEBUG=1                   verbose decision log -> stderr (bundle-wide flag)
+#   ZAPIER_WORKFLOWS_DOCTOR_NOW=<epoch>        override the clock (tests)
+#   ZAPIER_WORKFLOWS_DOCTOR_UPDATE_CMD=<cmd>   override the update command (tests)
+#   ZAPIER_WORKFLOWS_DOCTOR_BUNDLE_ROOT=<dir>  override the fingerprint root (tests)
+#   XDG_CACHE_HOME=<dir>                       override cache root (tests / XDG)
 
 DAILY=86400
 BURST_COOLDOWN=900
 MAX_FAILURES=3
-UPDATE_NOTE="Refreshed the Zapier Workflows skills in the background; the updates take full effect the next time you reload this workspace."
+UPDATE_NOTE="Refreshed the Zapier Workflows skills; the updates take full effect the next time you reload this workspace."
 DEFAULT_UPDATE_CMD="npx skills update workflows-install workflows-doctor workflows-create workflows-list workflows-history workflows-modify -y"
 
 debug() {
@@ -40,17 +41,39 @@ as_int() {
   esac
 }
 
-# Grounded on real `skills update` output (verified against the CLI):
-#   noop:     "... All global skills are up to date"   (exit 0)
-#   no-match: "No installed skills found matching: X"   (exit 0!) -> exit code is NOT a
-#             reliable failure signal, so we also scan output for error markers.
-# Biased to silence: only a STRONG positive signal counts as "updated"; ambiguous -> noop.
-# 'installed' is deliberately NOT a positive marker -- "No installed skills found"
-# contains it and would false-positive.
-classify_outcome() {
-  local rc="$1" out="$2" lc
+# The installed bundle root. Resolved with `pwd -P` so it works through the
+# symlinks the skills CLI creates (~/.claude/skills/<skill> -> ~/.agents/skills/<skill>);
+# the skill is installed at <root>/<skill>/scripts/skill-freshness-check.sh.
+bundle_root() {
+  if [ -n "${ZAPIER_WORKFLOWS_DOCTOR_BUNDLE_ROOT:-}" ]; then
+    printf '%s' "$ZAPIER_WORKFLOWS_DOCTOR_BUNDLE_ROOT"
+    return
+  fi
+  ( cd "$(dirname "$0")/../.." 2>/dev/null && pwd -P )
+}
+
+# Aggregate checksum of every installed workflow skill's SKILL.md. Used to detect
+# "did an update actually change anything on disk" -- a signal that cannot misfire
+# on CLI wording, unlike output parsing. cksum/find/sort only (bash 3.2-safe; no
+# jq/stat/shasum). No matches -> a stable constant, so before==after when nothing changed.
+bundle_fingerprint() {
+  local root="$1"
+  [ -d "$root" ] || { printf '0'; return; }
+  find "$root" -maxdepth 3 -path '*workflows*/SKILL.md' -type f -exec cksum {} + 2>/dev/null \
+    | sort | cksum | awk '{print $1}'
+}
+
+# Primary signal is the fingerprint diff; prose is only a fallback for the rare
+# case fingerprinting can't see the change.
+decide_outcome() {
+  local before="$1" after="$2" rc="$3" out="$4" lc
+  if [ "$before" != "$after" ]; then printf 'updated'; return; fi
   if [ "$rc" -ne 0 ]; then printf 'failed'; return; fi
   lc="$(printf '%s' "$out" | tr '[:upper:]' '[:lower:]')"
+  # `skills update` exits 0 even on its own errors (e.g. "No installed skills
+  # found"), so scan output too. The substrings can overlap benign text like
+  # "0 errors"; because the fingerprint check ran first, that only flips a silent
+  # noop to a (silent) failed -> retry sooner, never suppresses a real update.
   case "$lc" in
     *error*|*"not found"*|*enotfound*|*etimedout*|*network*|*failed*) printf 'failed'; return ;;
   esac
@@ -61,7 +84,7 @@ classify_outcome() {
 }
 
 write_marker() {
-  printf '%s\n%s\n%s\n%s\n' "$2" "$3" "$4" "$5" > "$1" 2>/dev/null || true
+  printf '%s\n%s\n%s\n' "$2" "$3" "$4" > "$1" 2>/dev/null || true
 }
 
 main() {
@@ -73,15 +96,14 @@ main() {
   marker="$cache_dir/$key"
   debug "scope_root=$scope_root key=$key marker=$marker now=$now"
 
-  local last_success last_attempt failures version l1 l2 l3 l4
-  last_success=0; last_attempt=0; failures=0; version=""
+  local last_success last_attempt failures l1 l2 l3
+  last_success=0; last_attempt=0; failures=0
   if [ -f "$marker" ]; then
-    l1=""; l2=""; l3=""; l4=""
-    { IFS= read -r l1; IFS= read -r l2; IFS= read -r l3; IFS= read -r l4; } < "$marker"
+    l1=""; l2=""; l3=""
+    { IFS= read -r l1; IFS= read -r l2; IFS= read -r l3; } < "$marker"
     last_success="$(as_int "$l1")"
     last_attempt="$(as_int "$l2")"
     failures="$(as_int "$l3")"
-    version="$l4"
   else
     debug "marker missing -> treat as due"
   fi
@@ -103,20 +125,23 @@ main() {
     exit 0
   fi
 
-  local update_cmd out rc outcome
+  local root before_fp after_fp update_cmd out rc outcome
+  root="$(bundle_root)"
+  before_fp="$(bundle_fingerprint "$root")"
   update_cmd="${ZAPIER_WORKFLOWS_DOCTOR_UPDATE_CMD:-$DEFAULT_UPDATE_CMD}"
-  debug "due -> running update: $update_cmd"
+  debug "due -> root=$root before_fp=$before_fp running update: $update_cmd"
   out="$(eval "$update_cmd" 2>&1)"
   rc=$?
-  outcome="$(classify_outcome "$rc" "$out")"
-  debug "state=$outcome rc=$rc"
+  after_fp="$(bundle_fingerprint "$root")"
+  outcome="$(decide_outcome "$before_fp" "$after_fp" "$rc" "$out")"
+  debug "state=$outcome rc=$rc after_fp=$after_fp"
 
   mkdir -p "$cache_dir" 2>/dev/null
   if [ "$outcome" = "failed" ]; then
     failures=$(( failures + 1 ))
-    write_marker "$marker" "$last_success" "$now" "$failures" "$version"
+    write_marker "$marker" "$last_success" "$now" "$failures"
   else
-    write_marker "$marker" "$now" "$now" "0" "$version"
+    write_marker "$marker" "$now" "$now" "0"
   fi
 
   if [ "$outcome" = "updated" ]; then
