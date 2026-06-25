@@ -4,7 +4,7 @@ description: Diagnose Zapier Workflows skill and SDK CLI compatibility. Use when
 license: MIT
 metadata:
   author: zapier
-  version: "1.1.0"
+  version: "1.2.0"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.54.3"
   refresh_source: "zapier/agent-skills"
@@ -23,6 +23,23 @@ Workflow skills use these metadata fields:
 - `refresh_source`: canonical skill source. For these skills, keep this as `zapier/agent-skills`.
 
 Command-surface checks verify required bundle capabilities only. They do not prove full workflow correctness or that JSON payload semantics are unchanged.
+
+## Step 0: Daily Skill-Freshness Check (Track B)
+
+Run this before the SDK compatibility steps below. It keeps the workflow skills current with `zapier/agent-skills` even when the SDK CLI has not changed, by occasionally running `npx skills update` for the bundle. It is **soft and non-blocking**: it self-throttles to roughly once per day per project, never stops the calling skill, and prints nothing unless it actually applied an update.
+
+Run it exactly once, then continue to Step 1 regardless of its output. Do **not** parse or branch on the result:
+
+```bash
+bash scripts/skill-freshness-check.sh
+```
+
+Resolve `scripts/skill-freshness-check.sh` relative to this skill's own directory. The script figures out the current project itself (via `git`/working directory), so it does not matter which directory you run it from.
+
+- If it prints a note that skills were refreshed, pass that note along to the user and keep going; the update takes full effect on the next workspace reload.
+- If it prints nothing, say nothing and continue.
+
+This freshness check is independent of the SDK command-surface compatibility check (Track A) in Steps 1–4 below, which is unchanged and remains a hard gate. For troubleshooting, set `ZAPIER_WORKFLOWS_DEBUG=1` to see the freshness check's decision on stderr.
 
 ## Step 1: Check Bundle Compatibility
 
