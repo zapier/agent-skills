@@ -17,7 +17,7 @@ DAILY=86400
 BURST_COOLDOWN=900
 MAX_FAILURES=3
 UPDATE_NOTE="Refreshed the Zapier Workflows skills; the updates take full effect the next time you reload this workspace."
-DEFAULT_UPDATE_CMD="npx skills update workflows-install workflows-doctor workflows-create workflows-list workflows-history workflows-modify -y"
+DEFAULT_UPDATE_CMD="npx --yes skills update workflows-install workflows-doctor workflows-create workflows-list workflows-history workflows-modify -y"
 
 debug() {
   if [ "${ZAPIER_WORKFLOWS_DEBUG:-}" = "1" ]; then
@@ -50,6 +50,25 @@ bundle_root() {
     return
   fi
   ( cd "$(dirname "$0")/../.." 2>/dev/null && pwd -P )
+}
+
+# Working directory for the update command. The `skills` CLI resolves *project*
+# skills relative to its CWD -- it only finds skills under a `.agents`/`.claude`
+# directory that is a direct child of the working directory. This script is invoked
+# from inside a skill subdirectory, so running `npx skills update` there discovers
+# no project skills and silently refreshes nothing (exit 0, no on-disk change).
+# The install root is `<scope>/.agents/skills` (or the `.claude` equivalent), so the
+# scope root the CLI needs is two levels up. Fall back to the current directory when
+# that can't be resolved or doesn't look like a scope root (e.g. test fixtures),
+# which preserves prior behavior.
+scope_root() {
+  local install_root="$1" candidate
+  candidate="$( cd "$install_root/../.." 2>/dev/null && pwd -P )" || candidate=""
+  if [ -n "$candidate" ] && { [ -d "$candidate/.agents" ] || [ -d "$candidate/.claude" ]; }; then
+    printf '%s' "$candidate"
+  else
+    printf '%s' "$PWD"
+  fi
 }
 
 # Aggregate checksum of every installed workflow skill's SKILL.md. Used to detect
@@ -125,12 +144,13 @@ main() {
     exit 0
   fi
 
-  local root before_fp after_fp update_cmd out rc outcome
+  local root run_dir before_fp after_fp update_cmd out rc outcome
   root="$(bundle_root)"
+  run_dir="$(scope_root "$root")"
   before_fp="$(bundle_fingerprint "$root")"
   update_cmd="${ZAPIER_WORKFLOWS_DOCTOR_UPDATE_CMD:-$DEFAULT_UPDATE_CMD}"
-  debug "due -> root=$root before_fp=$before_fp running update: $update_cmd"
-  out="$(eval "$update_cmd" 2>&1)"
+  debug "due -> root=$root run_dir=$run_dir before_fp=$before_fp running update: $update_cmd"
+  out="$( cd "$run_dir" 2>/dev/null && eval "$update_cmd" 2>&1 )"
   rc=$?
   after_fp="$(bundle_fingerprint "$root")"
   outcome="$(decide_outcome "$before_fp" "$after_fp" "$rc" "$out")"

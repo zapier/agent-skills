@@ -4,7 +4,7 @@ description: Diagnose Zapier Workflows skill and SDK CLI compatibility. Use when
 license: MIT
 metadata:
   author: zapier
-  version: "1.2.0"
+  version: "1.2.1"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.54.3"
   refresh_source: "zapier/agent-skills"
@@ -34,7 +34,7 @@ Run it exactly once, then continue to Step 1 regardless of its output. Do **not*
 bash scripts/skill-freshness-check.sh
 ```
 
-Resolve `scripts/skill-freshness-check.sh` relative to this skill's own directory. The script figures out the current project itself (via `git`/working directory), so it does not matter which directory you run it from.
+Resolve `scripts/skill-freshness-check.sh` relative to this skill's own directory. The script locates the installed skill bundle from its own path and runs the bundle update from the scope root that contains it (the directory holding `.agents`/`.claude`), so it does not matter which directory you invoke it from.
 
 - If it prints a note that skills were refreshed, pass that note along to the user and keep going; the update takes full effect on the next workspace reload.
 - If it prints nothing, say nothing and continue.
