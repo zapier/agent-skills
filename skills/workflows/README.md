@@ -24,7 +24,7 @@ Copy and paste this into your agent prompt:
 
 ## Daily Skill-Freshness Auto-Update
 
-`workflows-doctor` runs a soft, throttled freshness check ("Track B") before its SDK compatibility check. About once per day per project it runs `npx skills update` for the workflow bundle so content-only skill improvements — those shipped without an SDK version bump — are picked up automatically. It is non-blocking and silent unless an update is applied; updates take full effect on the next workspace reload.
+`workflows-doctor` runs a soft, throttled freshness check before its SDK compatibility check. About once per day per project it runs `npx skills update` for the workflow bundle so content-only skill improvements — those shipped without an SDK version bump — are picked up automatically. It is non-blocking and silent unless an update is applied; updates take full effect on the next workspace reload.
 
 Throttle state lives in a per-project marker under `${XDG_CACHE_HOME:-$HOME/.cache}/zapier-workflows-doctor/` (never in your repo). On failure it retries every 15 minutes up to 3 times, then falls back to a daily retry; any success resets the budget. Set `ZAPIER_WORKFLOWS_DEBUG=1` to see its decisions on stderr.
 

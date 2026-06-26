@@ -1,5 +1,5 @@
 #!/bin/bash
-# ABOUTME: Track B "skill freshness" check for the Zapier Workflows skill bundle.
+# ABOUTME: Skill-freshness check for the Zapier Workflows skill bundle.
 # ABOUTME: Throttled (~daily) best-effort `npx skills update`; ALWAYS exits 0, never blocks the caller.
 #
 # Invoked by workflows-doctor "Step 0". Soft and non-blocking by design.
