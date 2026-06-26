@@ -98,6 +98,20 @@ RUN_RC=$?; RUN_ERR="$(cat "$errfile")"; rm -f "$errfile"
 want_state updated; want_stdout_has "$NOTE_SUBSTR"; want_rc0; want_marker_line 1 "$NOW"; want_marker_line 3 "0"
 rm -rf "$fproot"; teardown
 
+echo "Case 13: update runs from the scope root containing the install dir (not the invocation dir)"
+setup
+scope="$(mktemp -d)"
+mkdir -p "$scope/.agents/skills/workflows-doctor"   # install root = $scope/.agents/skills
+cwdfile="$(mktemp)"
+stub="pwd -P > '$cwdfile'"
+( cd / && ZAPIER_WORKFLOWS_DEBUG=1 ZAPIER_WORKFLOWS_DOCTOR_NOW="$NOW" \
+    ZAPIER_WORKFLOWS_DOCTOR_BUNDLE_ROOT="$scope/.agents/skills" \
+    ZAPIER_WORKFLOWS_DOCTOR_UPDATE_CMD="$stub" bash "$SCRIPT" >/dev/null 2>&1 )
+got="$(cat "$cwdfile")"
+want="$(cd "$scope" && pwd -P)"
+[ "$got" = "$want" ] && ok "update cwd = scope root ($want)" || bad "expected update cwd [$want]; got [$got]"
+rm -rf "$scope" "$cwdfile"; teardown
+
 echo ""
 echo "TOTAL: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
