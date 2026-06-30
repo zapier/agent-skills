@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.3.4"
+  version: "1.3.5"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.59.3"
   refresh_source: "zapier/agent-skills"
@@ -96,6 +96,8 @@ zapier-sdk list-actions <appKey> --action-type <write|search|read|read_bulk> --j
 zapier-sdk list-action-input-fields <appKey> <actionType> <actionKey> --connection <connectionId> --json
 zapier-sdk list-action-input-field-choices <appKey> <actionType> <actionKey> <fieldKey> --connection <connectionId> --json
 ```
+
+**Inbound webhook trigger — use `trigger_url`, not `WebHookCLIAPI`:** If the user describes a workflow triggered by an inbound HTTP request ("trigger via webhook", "catch hook", "POST to start it", "fire when I receive a request"), do not use `WebHookCLIAPI` (Webhooks by Zapier) as the trigger app. `WebHookCLIAPI` trigger claims always fail in Code Substrate — the platform cannot generate the `_zap_static_hook_code` required to claim a `hooks.zapier.com` URL. The workflow publishes without error but stays permanently disabled. The correct approach: deploy the workflow without `--trigger` and give the user the `trigger_url` from `get-workflow` output (see Phase 7). Every Code Substrate workflow has this URL automatically — no trigger app needed.
 
 For workflows that should subscribe to a Zapier app trigger, use the experimental trigger discovery commands:
 
@@ -445,6 +447,12 @@ Finish by reporting:
 - Whether the workflow is private or account-visible.
 - Whether the workflow uses a Zapier app trigger or webhook/manual triggering.
 - The Zapier editor link: `https://zapier.com/durables-editor/<workflow-id>`.
+- **For webhook/manual-only workflows**, read and share the `trigger_url` from `get-workflow` output — this is the URL the user POSTs to in order to fire the workflow:
+
+```bash
+zapier-sdk --experimental get-workflow <workflow-id> --json
+# share the top-level "trigger_url" value with the user
+```
 
 ## Durable Patterns
 
