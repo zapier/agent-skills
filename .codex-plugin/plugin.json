@@ -1,0 +1,39 @@
+{
+  "name": "agent-skills",
+  "version": "0.1.0",
+  "description": "Zapier agent skills for Codex. Built and maintained by Zapier teams.",
+  "author": {
+    "name": "Zapier",
+    "email": "support@zapier.com",
+    "url": "https://zapier.com"
+  },
+  "homepage": "https://github.com/zapier/agent-skills",
+  "repository": "https://github.com/zapier/agent-skills",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "skills",
+    "zapier",
+    "workflows",
+    "automation",
+    "productivity"
+  ],
+  "skills": "./skills/workflows",
+  "interface": {
+    "displayName": "Zapier Agent Skills",
+    "shortDescription": "Skills for building, inspecting, and modifying Zapier Workflows from your agent.",
+    "longDescription": "A collection of skills authored by Zapier teams. The first cohort covers Zapier Workflows — install, create, list, history, and modify — and the set will grow as more teams contribute.",
+    "developerName": "Zapier",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://zapier.com",
+    "privacyPolicyURL": "https://zapier.com/privacy",
+    "termsOfServiceURL": "https://zapier.com/legal",
+    "defaultPrompt": [
+      "Install Zapier Workflows and bootstrap the workflow skills",
+      "Create a new Zapier Workflow from this description",
+      "List my Zapier Workflows and show recent run history"
+    ],
+    "brandColor": "#FF4F00"
+  }
+}

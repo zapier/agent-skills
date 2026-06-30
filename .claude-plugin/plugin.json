@@ -1,0 +1,24 @@
+{
+  "name": "agent-skills",
+  "description": "Zapier agent skills for Claude Code. Built and maintained by Zapier teams.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Zapier",
+    "email": "support@zapier.com",
+    "url": "https://zapier.com"
+  },
+  "homepage": "https://github.com/zapier/agent-skills",
+  "repository": "https://github.com/zapier/agent-skills",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "skills",
+    "zapier",
+    "workflows",
+    "automation",
+    "productivity"
+  ],
+  "skills": [
+    "./skills/workflows/"
+  ]
+}
