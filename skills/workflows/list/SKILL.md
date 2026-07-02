@@ -44,7 +44,7 @@ https://zapier.com/durables-editor/<workflow-id>
 
 Treat `trigger_url` as account-sensitive: firing it invokes the workflow as the authenticated account, so while the token in the URL is no longer a standalone credential, it is still not something to print gratuitously. Do not print `trigger_url` unless the user explicitly asks for it.
 
-For workflows with a catch-hook trigger (for example "Webhooks by Zapier", or other static-hook apps like PayPal, Salesforce, or Twilio), check the matching entry in `triggers[]` for a `details` object. Unlike `trigger_url`, `details.webhook_url` is meant to be shared — it's the URL the user pastes into the external service — so surface it plainly when present. If `triggers[]` entries have no `details` field, the installed SDK may predate this field; say so rather than assuming no webhook URL exists.
+Check each entry in `triggers[]` for `details.webhook_url`, regardless of trigger type — its presence alone tells you there's a catch URL. Unlike `trigger_url`, `webhook_url` is meant to be shared — it's the URL the user pastes into the external service — so surface it plainly when present. Most triggers have no `webhook_url`, and that is normal; do not flag its absence unless the user specifically expects one (for example they mention "Webhooks by Zapier"), in which case the installed SDK may predate this field.
 
 ## Ownership Scoping
 
