@@ -137,7 +137,7 @@ For `params`, match each field's `value_type` from `list-trigger-input-fields <a
 
 Capture app implementation/version information from SDK discovery output when available, such as `list-apps`, `get-app`, `list-actions`, or trigger/action result metadata. Do not invent app versions. If no implementation/version binding is exposed, omit `--app_versions` rather than guessing.
 
-"Webhooks by Zapier" and other apps with a catch-hook trigger (PayPal, Salesforce, Twilio, WordPress, Wufoo, Zillow, and others) are discovered and configured exactly like any other trigger app — nothing about them is special-cased. Search `list-apps --search "webhook"` (or the specific app name) for its `implementation_id` (for example `WebHookCLIAPI@1.1.0` — an illustrative example, not a version to hardcode; confirm the current version via discovery), then `list-triggers <appKey>` for its catch-hook trigger action (for example `hook_v2` or `hook_raw`). These triggers are typically no-auth (`authentication_id: null`) with empty `params`. Configure them through `--trigger` at publish time (Phase 6) like any other trigger — do not treat them as "no trigger" / manual-only workflows.
+"Webhooks by Zapier" and other apps with a catch-hook trigger (PayPal, Salesforce, Twilio, WordPress, Wufoo, Zillow, and others) are discovered and configured exactly like any other trigger app — nothing about them is special-cased. Search `list-apps --search "webhook"` (or the specific app name) for its `implementation_id` (for example `WebHookCLIAPI@1.1.0` — an illustrative example, not a version to hardcode; confirm the current version via discovery), then `list-triggers <appKey>` for its catch-hook trigger action. "Webhooks by Zapier" itself is no-auth (`authentication_id: null`) with empty `params`, and its action key is currently `hook_v2` (or `hook_raw`) — but that is specific to `WebHookCLIAPI`, not a pattern the other apps share. Other catch-hook apps (PayPal, Salesforce, Twilio, ...) commonly require a connection, because claiming their trigger means calling the provider's API to register a subscription. Do not assume no-auth or empty `params` for those — confirm each app's actual action key, auth, and param requirements via `list-triggers`/`list-trigger-input-fields` (see above) rather than generalizing from "Webhooks by Zapier." Configure them through `--trigger` at publish time (Phase 6) like any other trigger — do not treat them as "no trigger" / manual-only workflows.
 
 ## Phase 3: Confirm The Build Plan
 
@@ -421,11 +421,7 @@ zapier-sdk --experimental get-workflow <workflow-id> --json
 
 If `enabled` is `false` even though you published with `--enabled`, the trigger claim failed. The most common cause is a `selected_api` that is not version-pinned to the `implementation_id`, or a `params` field with the wrong shape (see Phase 2). Re-publish with a corrected `--trigger` and re-check. Do not report the workflow as deployed until `get-workflow` shows `enabled: true`.
 
-For a workflow with a catch-hook trigger (for example "Webhooks by Zapier"), the URL external services must call is on the trigger itself, not the workflow-level `trigger_url`. Check the matching entry in `triggers[]` from the same `get-workflow --json` read-back for a `details` object:
-
-```bash
-zapier-sdk --experimental get-workflow <workflow-id> --json
-```
+For a workflow with a catch-hook trigger (for example "Webhooks by Zapier"), the URL external services must call is on the trigger itself, not the workflow-level `trigger_url`. Check the matching entry in `triggers[]` from the `get-workflow --json` read-back above for a `details` object (re-run the same command if enough time has passed since that read that the claim state could have changed).
 
 If present, `triggers[].details.webhook_url` is the catch URL to give to the external service — show it to the user plainly; unlike `trigger_url`, it is meant to be shared. If `triggers[]` entries have no `details` field, the installed `@zapier/zapier-sdk` may predate this field — run `workflows-doctor` to check for an update, and in the meantime tell the user to copy the URL from the trigger step in the Zapier editor (`https://zapier.com/durables-editor/<workflow-id>`) instead of asserting the field doesn't exist.
 
