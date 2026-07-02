@@ -137,6 +137,8 @@ For `params`, match each field's `value_type` from `list-trigger-input-fields <a
 
 Capture app implementation/version information from SDK discovery output when available, such as `list-apps`, `get-app`, `list-actions`, or trigger/action result metadata. Do not invent app versions. If no implementation/version binding is exposed, omit `--app_versions` rather than guessing.
 
+"Webhooks by Zapier" and other apps with a catch-hook trigger (PayPal, Salesforce, Twilio, WordPress, Wufoo, Zillow, and others) are discovered and configured exactly like any other trigger app — nothing about them is special-cased. Search `list-apps --search "webhook"` (or the specific app name) for its `implementation_id` (for example `WebHookCLIAPI@1.1.0` — an illustrative example, not a version to hardcode; confirm the current version via discovery), then `list-triggers <appKey>` for its catch-hook trigger action (for example `hook_v2` or `hook_raw`). These triggers are typically no-auth (`authentication_id: null`) with empty `params`. Configure them through `--trigger` at publish time (Phase 6) like any other trigger — do not treat them as "no trigger" / manual-only workflows.
+
 ## Phase 3: Confirm The Build Plan
 
 Before writing code, present:
@@ -147,7 +149,7 @@ Input: { field1, field2 }
 Connections:
   alias = connectionId (connection title)
 Trigger:
-  selected_api.action with params, or none for webhook/manual-only workflow
+  selected_api.action with params (including "Webhooks by Zapier" or other catch-hook apps), or none for a workflow fired only manually via `trigger-workflow`
 Steps:
   1. <step-name> - <AppName>.<actionType>.<actionKey>
   2. <step-name> - <AppName>.<actionType>.<actionKey>
@@ -370,7 +372,9 @@ For trigger-backed workflows, build the `trigger` JSON from Phase 2. Keep `selec
 }
 ```
 
-Publish a webhook/manual-only workflow by omitting `--trigger`:
+A "Webhooks by Zapier" or other catch-hook trigger is a real trigger — publish it with `--trigger` using the config captured in Phase 2, the same as any other app trigger.
+
+Publish a workflow with no trigger at all — invoked only manually via `trigger-workflow` — by omitting `--trigger`:
 
 ```bash
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
@@ -417,6 +421,14 @@ zapier-sdk --experimental get-workflow <workflow-id> --json
 
 If `enabled` is `false` even though you published with `--enabled`, the trigger claim failed. The most common cause is a `selected_api` that is not version-pinned to the `implementation_id`, or a `params` field with the wrong shape (see Phase 2). Re-publish with a corrected `--trigger` and re-check. Do not report the workflow as deployed until `get-workflow` shows `enabled: true`.
 
+For a workflow with a catch-hook trigger (for example "Webhooks by Zapier"), the URL external services must call is on the trigger itself, not the workflow-level `trigger_url`. Check the matching entry in `triggers[]` from the same `get-workflow --json` read-back for a `details` object:
+
+```bash
+zapier-sdk --experimental get-workflow <workflow-id> --json
+```
+
+If present, `triggers[].details.webhook_url` is the catch URL to give to the external service — show it to the user plainly; unlike `trigger_url`, it is meant to be shared. If `triggers[]` entries have no `details` field, the installed `@zapier/zapier-sdk` may predate this field — run `workflows-doctor` to check for an update, and in the meantime tell the user to copy the URL from the trigger step in the Zapier editor (`https://zapier.com/durables-editor/<workflow-id>`) instead of asserting the field doesn't exist.
+
 If manual triggering is supported for the workflow, test it only after confirming side effects with the user:
 
 ```bash
@@ -443,7 +455,7 @@ Finish by reporting:
 - Whether testing passed.
 - Whether the deployed workflow is enabled.
 - Whether the workflow is private or account-visible.
-- Whether the workflow uses a Zapier app trigger or webhook/manual triggering.
+- Whether the workflow uses a Zapier app trigger, a catch-hook trigger (report its `webhook_url` if available), or no trigger (manual-only via `trigger-workflow`).
 - The Zapier editor link: `https://zapier.com/durables-editor/<workflow-id>`.
 
 ## Durable Patterns
