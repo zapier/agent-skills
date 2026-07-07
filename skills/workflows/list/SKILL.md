@@ -4,7 +4,7 @@ description: List durable workflows in the authenticated Zapier account using th
 license: MIT
 metadata:
   author: zapier
-  version: "1.1.0"
+  version: "1.1.1"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.54.3"
   refresh_source: "zapier/agent-skills"

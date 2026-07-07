@@ -4,7 +4,7 @@ description: Modify and republish an existing durable workflow using the Zapier 
 license: MIT
 metadata:
   author: zapier
-  version: "1.1.1"
+  version: "1.1.2"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.54.3"
   refresh_source: "zapier/agent-skills"
@@ -134,7 +134,7 @@ zapier-sdk --experimental get-workflow <workflow-id> --json
 zapier-sdk --experimental list-workflow-versions <workflow-id> --json
 ```
 
-Confirm the newest version reflects the publish, the workflow is still enabled if it should be, and trigger/connection/app-version metadata was preserved. If the change is hard to validate without a live trigger fire, tell the user exactly what test event to send and what result to expect.
+Confirm the newest version reflects the publish, the workflow is still enabled if it should be, and trigger/connection/app-version metadata was preserved. Check the matching entry in `triggers[]` for `details.webhook_url`, regardless of trigger type — if present, it's the catch URL external services call and is meant to be shared, unlike the workflow-level `trigger_url`; most triggers have none, and that is normal. If the change is hard to validate without a live trigger fire, tell the user exactly what test event to send and what result to expect.
 
 Finish by reporting:
 
@@ -142,6 +142,7 @@ Finish by reporting:
 - Whether the requested change was published.
 - Whether trigger, connection, and app-version metadata were preserved.
 - Whether the workflow is enabled.
+- The trigger's `webhook_url`, if present.
 - The Zapier editor link: `https://zapier.com/durables-editor/<workflow-id>`.
 
 ## Reverting

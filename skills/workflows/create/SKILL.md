@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.3.4"
+  version: "1.3.5"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.59.3"
   refresh_source: "zapier/agent-skills"
@@ -137,7 +137,7 @@ For `params`, match each field's `value_type` from `list-trigger-input-fields <a
 
 Capture app implementation/version information from SDK discovery output when available, such as `list-apps`, `get-app`, `list-actions`, or trigger/action result metadata. Do not invent app versions. If no implementation/version binding is exposed, omit `--app_versions` rather than guessing.
 
-"Webhooks by Zapier" and other apps with a catch-hook trigger (PayPal, Salesforce, Twilio, WordPress, Wufoo, Zillow, and others) are discovered and configured exactly like any other trigger app — nothing about them is special-cased. Search `list-apps --search "webhook"` (or the specific app name) for its `implementation_id` (for example `WebHookCLIAPI@1.1.0` — an illustrative example, not a version to hardcode; confirm the current version via discovery), then `list-triggers <appKey>` for its catch-hook trigger action. "Webhooks by Zapier" itself is no-auth (`authentication_id: null`) with empty `params`, and its action key is currently `hook_v2` (or `hook_raw`) — but that is specific to `WebHookCLIAPI`, not a pattern the other apps share. Other catch-hook apps (PayPal, Salesforce, Twilio, ...) commonly require a connection, because claiming their trigger means calling the provider's API to register a subscription. Do not assume no-auth or empty `params` for those — confirm each app's actual action key, auth, and param requirements via `list-triggers`/`list-trigger-input-fields` (see above) rather than generalizing from "Webhooks by Zapier." Configure them through `--trigger` at publish time (Phase 6) like any other trigger — do not treat them as "no trigger" / manual-only workflows.
+"Webhooks by Zapier" and other apps with a catch-hook trigger (PayPal, Salesforce, Twilio, WordPress, Wufoo, Zillow, and others) are discovered and configured exactly like any other trigger app — nothing about them is special-cased. Search `list-apps --search "webhook"` (or the specific app name) for its `implementation_id` (for example `WebHookCLIAPI@1.1.0` — an illustrative example, not a version to hardcode; confirm the current version via discovery), then `list-triggers <appKey>` for its catch-hook trigger action. "Webhooks by Zapier" itself is no-auth (`authentication_id: null`) with empty `params`, but confirm its action key via `list-triggers WebHookCLIAPI` rather than hardcoding one — as of this writing it exposes both `hook_v2` (parsed payload; the common default) and `hook_raw` (unparsed body and headers, max 2MB), and that pair of action keys is specific to `WebHookCLIAPI`, not a pattern the other apps share. Other catch-hook apps (PayPal, Salesforce, Twilio, ...) commonly require a connection, because claiming their trigger means calling the provider's API to register a subscription. Do not assume no-auth or empty `params` for those — confirm each app's actual action key, auth, and param requirements via `list-triggers`/`list-trigger-input-fields` (see above) rather than generalizing from "Webhooks by Zapier." Configure them through `--trigger` at publish time (Phase 6) like any other trigger — do not treat them as "no trigger" / manual-only workflows.
 
 ## Phase 3: Confirm The Build Plan
 
