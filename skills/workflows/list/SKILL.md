@@ -4,7 +4,7 @@ description: List durable workflows in the authenticated Zapier account using th
 license: MIT
 metadata:
   author: zapier
-  version: "1.1.0"
+  version: "1.1.1"
   sdk_cli_min: "0.54.3"
   sdk_cli_validated: "0.54.3"
   refresh_source: "zapier/agent-skills"
@@ -42,7 +42,9 @@ For each workflow with an `id`, include the Zapier editor link:
 https://zapier.com/durables-editor/<workflow-id>
 ```
 
-Treat `trigger_url` as sensitive because it contains a secret token. Do not print `trigger_url` unless the user explicitly asks for it.
+Treat `trigger_url` as account-sensitive: firing it invokes the workflow as the authenticated account, so while the token in the URL is no longer a standalone credential, it is still not something to print gratuitously. Do not print `trigger_url` unless the user explicitly asks for it.
+
+Check each entry in `triggers[]` for `details.webhook_url`, regardless of trigger type — its presence alone tells you there's a catch URL. Unlike `trigger_url`, `webhook_url` is meant to be shared — it's the URL the user pastes into the external service — so surface it plainly when present. Most triggers have no `webhook_url`, and that is normal; do not flag its absence unless the user specifically expects one (for example they mention "Webhooks by Zapier"), in which case the installed SDK may predate this field.
 
 ## Ownership Scoping
 
