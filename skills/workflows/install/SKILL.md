@@ -4,9 +4,9 @@ description: Install the Zapier SDK CLI for Zapier Workflows Early Access and bo
 license: MIT
 metadata:
   author: zapier
-  version: "1.1.0"
-  sdk_cli_min: "0.54.3"
-  sdk_cli_validated: "0.54.3"
+  version: "1.2.0"
+  sdk_cli_min: "0.56.2"
+  sdk_cli_validated: "0.65.0"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -124,7 +124,7 @@ zapier-sdk --experimental --help
 zapier-sdk --experimental create-workflow --help
 zapier-sdk --experimental publish-workflow-version --help
 zapier-sdk --experimental run-durable --help
-zapier-sdk --experimental list-triggers --help
+zapier-sdk list-triggers --help
 zapier-sdk --experimental get-workflow-run --help
 zapier-sdk --experimental trigger-workflow --help
 ```
@@ -143,9 +143,9 @@ get-workflow-run
 The command-specific help must expose the flags the companion skills depend on:
 
 - `create-workflow --help` includes `--private`.
-- `publish-workflow-version --help` includes `--connections`, `--app_versions`, and `--trigger`.
+- `publish-workflow-version --help` includes `--connections`, `--app-versions`, and `--trigger`.
 - `run-durable --help` includes `--connections` and `--private`.
-- `list-triggers --help` succeeds.
+- `list-triggers --help` succeeds (no `--experimental` flag required; Triggers commands graduated to the stable surface).
 - `get-workflow-run --help` succeeds.
 - `trigger-workflow --help` includes `--input`.
 

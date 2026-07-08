@@ -4,9 +4,9 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.3.6"
-  sdk_cli_min: "0.54.3"
-  sdk_cli_validated: "0.59.3"
+  version: "1.4.0"
+  sdk_cli_min: "0.56.2"
+  sdk_cli_validated: "0.65.0"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -31,7 +31,7 @@ zapier-sdk --experimental --help
 zapier-sdk --experimental create-workflow --help
 zapier-sdk --experimental publish-workflow-version --help
 zapier-sdk --experimental run-durable --help
-zapier-sdk --experimental list-triggers --help
+zapier-sdk list-triggers --help
 zapier-sdk --experimental trigger-workflow --help
 ```
 
@@ -97,12 +97,12 @@ zapier-sdk list-action-input-fields <appKey> <actionType> <actionKey> --connecti
 zapier-sdk list-action-input-field-choices <appKey> <actionType> <actionKey> <fieldKey> --connection <connectionId> --json
 ```
 
-For workflows that should subscribe to a Zapier app trigger, use the experimental trigger discovery commands:
+For workflows that should subscribe to a Zapier app trigger, use the trigger discovery commands (stable surface — no `--experimental` flag required):
 
 ```bash
-zapier-sdk --experimental list-triggers <appKey> --json
-zapier-sdk --experimental list-trigger-input-fields <appKey> <triggerKey> --connection <connectionId> --json
-zapier-sdk --experimental list-trigger-input-field-choices <appKey> <triggerKey> <fieldKey> --connection <connectionId> --json
+zapier-sdk list-triggers <appKey> --json
+zapier-sdk list-trigger-input-fields <appKey> <triggerKey> --connection <connectionId> --json
+zapier-sdk list-trigger-input-field-choices <appKey> <triggerKey> <fieldKey> --connection <connectionId> --json
 ```
 
 If several apps, connections, actions, triggers, or field choices are plausible, show the candidates and ask the user to choose.
@@ -166,7 +166,7 @@ For `selected_api`, use the **version-pinned implementation identifier** — the
 
 For `params`, match each field's `value_type` from `list-trigger-input-fields <app> <action>`. ARRAY fields must be JSON arrays (for example `"dow": ["1"]`); STRING fields must be plain strings (for example `"hod": "9:00 AM"`). Passing a scalar where an array is expected (or vice versa) fails the trigger claim the same silent way.
 
-Capture app implementation/version information from SDK discovery output when available, such as `list-apps`, `get-app`, `list-actions`, or trigger/action result metadata. Do not invent app versions. If no implementation/version binding is exposed, omit `--app_versions` rather than guessing.
+Capture app implementation/version information from SDK discovery output when available, such as `list-apps`, `get-app`, `list-actions`, or trigger/action result metadata. Do not invent app versions. If no implementation/version binding is exposed, omit `--app-versions` rather than guessing.
 
 "Webhooks by Zapier" and other apps with a catch-hook trigger (PayPal, Salesforce, Twilio, WordPress, Wufoo, Zillow, and others) are discovered and configured exactly like any other trigger app — nothing about them is special-cased. Search `list-apps --search "webhook"` (or the specific app name) for its `implementation_id` (for example `WebHookCLIAPI@1.1.0` — an illustrative example, not a version to hardcode; confirm the current version via discovery), then `list-triggers <appKey>` for its catch-hook trigger action. "Webhooks by Zapier" itself is no-auth (`authentication_id: null`) with empty `params`, but confirm its action key via `list-triggers WebHookCLIAPI` rather than hardcoding one — as of this writing it exposes both `hook_v2` (parsed payload; the common default) and `hook_raw` (unparsed body and headers, max 2MB), and that pair of action keys is specific to `WebHookCLIAPI`, not a pattern the other apps share. Other catch-hook apps (PayPal, Salesforce, Twilio, ...) commonly require a connection, because claiming their trigger means calling the provider's API to register a subscription. Do not assume no-auth or empty `params` for those — confirm each app's actual action key, auth, and param requirements via `list-triggers`/`list-trigger-input-fields` (see above) rather than generalizing from "Webhooks by Zapier." Configure them through `--trigger` at publish time (Phase 6) like any other trigger — do not treat them as "no trigger" / manual-only workflows.
 
@@ -382,7 +382,7 @@ For publish, use the same nested `connections` shape as `run-durable` — each a
 }
 ```
 
-If app implementation/version information is known, build `app_versions`:
+If app implementation/version information is known, build the `--app-versions` payload:
 
 ```json
 {
@@ -390,7 +390,7 @@ If app implementation/version information is known, build `app_versions`:
 }
 ```
 
-Omit the entire `--app_versions` flag when no app implementation/version binding is needed. Likewise, omit `--connections` when the workflow has no connection bindings. Do not pass placeholder text like "if needed" to the CLI.
+Omit the entire `--app-versions` flag when no app implementation/version binding is needed. Likewise, omit `--connections` when the workflow has no connection bindings. Do not pass placeholder text like "if needed" to the CLI.
 
 For trigger-backed workflows, build the `trigger` JSON from Phase 2. Keep `selected_api` version-pinned to the `implementation_id` (for example `GoogleSheetsAPI@2.3.0`) and keep each `params` field shaped to its `value_type` (see Phase 2) — a bare app key or a wrong param shape makes the trigger claim fail silently at publish:
 
@@ -414,7 +414,7 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
   --zapier-durable-version '<pinned durable version>' \
   --connections '<publish connection bindings JSON>' \
-  --app_versions '<app versions JSON if needed>' \
+  --app-versions '<app versions JSON if needed>' \
   --enabled \
   --json
 ```
@@ -426,7 +426,7 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
   --zapier-durable-version '<pinned durable version>' \
   --connections '<publish connection bindings JSON>' \
-  --app_versions '<app versions JSON if needed>' \
+  --app-versions '<app versions JSON if needed>' \
   --trigger '<trigger config JSON>' \
   --enabled \
   --json
