@@ -6,7 +6,7 @@ metadata:
   author: zapier
   version: "1.2.0"
   sdk_cli_min: "0.56.2"
-  sdk_cli_validated: "0.65.0"
+  sdk_cli_validated: "0.66.1"
   refresh_source: "zapier/agent-skills"
 ---
 
