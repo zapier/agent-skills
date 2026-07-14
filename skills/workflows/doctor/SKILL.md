@@ -4,9 +4,9 @@ description: Diagnose Zapier Workflows skill and SDK CLI compatibility. Use when
 license: MIT
 metadata:
   author: zapier
-  version: "1.2.1"
-  sdk_cli_min: "0.54.3"
-  sdk_cli_validated: "0.54.3"
+  version: "1.3.0"
+  sdk_cli_min: "0.56.2"
+  sdk_cli_validated: "0.66.1"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -45,7 +45,7 @@ This freshness check is independent of the SDK command-surface compatibility che
 
 Check the workflow skill bundle as one unit. Do not maintain separate compatibility checks for `workflows-install`, `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`; users will normally use these skills together, and drift in any core workflow SDK surface should refresh the whole bundle.
 
-Current workflow skills use `sdk_cli_min: "0.54.3"` and `sdk_cli_validated: "0.54.3"` unless the installed skills' metadata says otherwise.
+Current workflow skills use `sdk_cli_min: "0.56.2"` and `sdk_cli_validated: "0.66.1"` unless the installed skills' metadata says otherwise.
 
 ## Step 2: Check SDK CLI Versions
 
@@ -115,7 +115,7 @@ zapier-sdk --experimental run-durable --help
 zapier-sdk --experimental list-workflows --help
 zapier-sdk --experimental list-workflow-runs --help
 zapier-sdk --experimental get-workflow-run --help
-zapier-sdk --experimental list-triggers --help
+zapier-sdk list-triggers --help
 zapier-sdk --experimental trigger-workflow --help
 zapier-sdk --experimental get-trigger-run --help
 zapier-sdk --experimental get-workflow --help
@@ -125,7 +125,7 @@ zapier-sdk --experimental get-workflow-version --help
 Example flags from the validated SDK CLI surface:
 
 - `create-workflow`: `--private`
-- `publish-workflow-version`: `--connections`, `--app_versions`, `--trigger`, `--enabled`
+- `publish-workflow-version`: `--connections`, `--app-versions`, `--trigger`, `--enabled`
 - `run-durable`: `--connections`, `--input`, `--private`
 - `trigger-workflow`: `--input`
 
