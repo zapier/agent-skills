@@ -115,7 +115,7 @@ zapier-sdk --experimental run-durable --help
 zapier-sdk --experimental list-workflows --help
 zapier-sdk --experimental list-workflow-runs --help
 zapier-sdk --experimental get-workflow-run --help
-zapier-sdk list-triggers --help
+zapier-sdk --experimental list-triggers --help
 zapier-sdk --experimental trigger-workflow --help
 zapier-sdk --experimental get-trigger-run --help
 zapier-sdk --experimental get-workflow --help

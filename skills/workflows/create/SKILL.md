@@ -31,7 +31,7 @@ zapier-sdk --experimental --help
 zapier-sdk --experimental create-workflow --help
 zapier-sdk --experimental publish-workflow-version --help
 zapier-sdk --experimental run-durable --help
-zapier-sdk list-triggers --help
+zapier-sdk --experimental list-triggers --help
 zapier-sdk --experimental trigger-workflow --help
 ```
 
@@ -97,12 +97,12 @@ zapier-sdk list-action-input-fields <appKey> <actionType> <actionKey> --connecti
 zapier-sdk list-action-input-field-choices <appKey> <actionType> <actionKey> <fieldKey> --connection <connectionId> --json
 ```
 
-For workflows that should subscribe to a Zapier app trigger, use the trigger discovery commands (stable surface — no `--experimental` flag required):
+For workflows that should subscribe to a Zapier app trigger, use the trigger discovery commands. Keep the `--experimental` flag for consistency with the rest of the Code Substrate surface during EA; these particular commands also work without it, but the workflow skills standardize on `--experimental` for clarity:
 
 ```bash
-zapier-sdk list-triggers <appKey> --json
-zapier-sdk list-trigger-input-fields <appKey> <triggerKey> --connection <connectionId> --json
-zapier-sdk list-trigger-input-field-choices <appKey> <triggerKey> <fieldKey> --connection <connectionId> --json
+zapier-sdk --experimental list-triggers <appKey> --json
+zapier-sdk --experimental list-trigger-input-fields <appKey> <triggerKey> --connection <connectionId> --json
+zapier-sdk --experimental list-trigger-input-field-choices <appKey> <triggerKey> <fieldKey> --connection <connectionId> --json
 ```
 
 If several apps, connections, actions, triggers, or field choices are plausible, show the candidates and ask the user to choose.

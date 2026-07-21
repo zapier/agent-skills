@@ -124,7 +124,7 @@ zapier-sdk --experimental --help
 zapier-sdk --experimental create-workflow --help
 zapier-sdk --experimental publish-workflow-version --help
 zapier-sdk --experimental run-durable --help
-zapier-sdk list-triggers --help
+zapier-sdk --experimental list-triggers --help
 zapier-sdk --experimental get-workflow-run --help
 zapier-sdk --experimental trigger-workflow --help
 ```
@@ -145,7 +145,7 @@ The command-specific help must expose the flags the companion skills depend on:
 - `create-workflow --help` includes `--private`.
 - `publish-workflow-version --help` includes `--connections`, `--app-versions`, and `--trigger`.
 - `run-durable --help` includes `--connections` and `--private`.
-- `list-triggers --help` succeeds (no `--experimental` flag required; Triggers commands graduated to the stable surface).
+- `list-triggers --help` succeeds. Keep the `--experimental` flag on trigger-discovery commands for consistency with the rest of the Code Substrate surface, even though these particular commands also work without it.
 - `get-workflow-run --help` succeeds.
 - `trigger-workflow --help` includes `--input`.
 
