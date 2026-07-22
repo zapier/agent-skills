@@ -97,7 +97,7 @@ zapier-sdk list-action-input-fields <appKey> <actionType> <actionKey> --connecti
 zapier-sdk list-action-input-field-choices <appKey> <actionType> <actionKey> <fieldKey> --connection <connectionId> --json
 ```
 
-For workflows that should subscribe to a Zapier app trigger, use the trigger discovery commands. Keep the `--experimental` flag for consistency with the rest of the Code Substrate surface during EA; these particular commands also work without it, but the workflow skills standardize on `--experimental` for clarity:
+For workflows that should subscribe to a Zapier app trigger, use the experimental trigger discovery commands:
 
 ```bash
 zapier-sdk --experimental list-triggers <appKey> --json

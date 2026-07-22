@@ -145,7 +145,7 @@ The command-specific help must expose the flags the companion skills depend on:
 - `create-workflow --help` includes `--private`.
 - `publish-workflow-version --help` includes `--connections`, `--app-versions`, and `--trigger`.
 - `run-durable --help` includes `--connections` and `--private`.
-- `list-triggers --help` succeeds. Keep the `--experimental` flag on trigger-discovery commands for consistency with the rest of the Code Substrate surface, even though these particular commands also work without it.
+- `list-triggers --help` succeeds.
 - `get-workflow-run --help` succeeds.
 - `trigger-workflow --help` includes `--input`.
 
