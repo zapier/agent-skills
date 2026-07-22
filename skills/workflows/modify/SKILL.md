@@ -65,6 +65,14 @@ Also fetch the workflow itself for its name, enabled state, and metadata:
 zapier-sdk --experimental get-workflow <workflow-id> --json
 ```
 
+**Check for unpublished draft changes.** Publishing the draft publishes *everything* in it, not just your edit — so you must know whether the draft already diverges from what's live. Skip this when you just created the draft in Step 2 (a fresh fork is identical to its base). Otherwise fetch the draft's base version and compare:
+
+```bash
+zapier-sdk --experimental get-workflow-version <workflow-id> <base_version_id from the draft> --json
+```
+
+If the draft's `source_files`, trigger, connections, or app versions differ from the base version, the draft holds unpublished work. Note a short summary of the differences — you'll surface it at confirmation time in Step 6. Never silently publish it and never silently discard it.
+
 ## Step 4: Make The Edit
 
 Prefer editing an existing local workflow file if one exists. Otherwise, write `source_files["workflow.ts"]` into a local `workflow.ts` in a workflow-specific directory and edit that copy.
@@ -110,6 +118,16 @@ Before publishing, summarize for the user:
 2. The code or config change.
 3. The workflow ID and draft being updated.
 4. The values being preserved, including dependencies, durable version, enabled state, connections, app versions, and trigger configuration.
+5. **Any unpublished draft changes found in Step 3.** Publishing the draft ships those too. Ask the user explicitly: include them in this publish, or start clean?
+   - **Include:** proceed as written — the draft content plus your edit publishes together.
+   - **Start clean:** discard the draft and fork a fresh one from the live version, then re-apply your edit on the fresh draft (re-run Steps 3–4 against it):
+
+     ```bash
+     zapier-sdk --experimental discard-workflow-draft <workflow-id> <draft-id> --json
+     zapier-sdk --experimental create-workflow-draft <workflow-id> --json
+     ```
+
+     Discard-and-refork is the only sanctioned way to drop unpublished work — never overwrite draft content in place to get rid of it.
 
 Wait for explicit confirmation before publishing.
 
