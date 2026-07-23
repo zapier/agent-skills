@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.4.0"
+  version: "2.0.0"
   sdk_cli_min: "0.55.0"
   sdk_cli_validated: "0.55.0"
   refresh_source: "zapier/agent-skills"
@@ -29,7 +29,9 @@ zapier-sdk --version
 zapier-sdk get-profile --json
 zapier-sdk --experimental --help
 zapier-sdk --experimental create-workflow --help
-zapier-sdk --experimental publish-workflow-version --help
+zapier-sdk --experimental create-workflow-draft --help
+zapier-sdk --experimental update-workflow-draft --help
+zapier-sdk --experimental publish-workflow-draft --help
 zapier-sdk --experimental run-durable --help
 zapier-sdk --experimental list-triggers --help
 zapier-sdk --experimental trigger-workflow --help
@@ -324,7 +326,7 @@ Build `source_files` from `workflow.ts`:
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
 ```
 
-Build the `connections` JSON from the selected aliases. It's a nested object — each alias maps to an object holding a `connectionId` (never a bare string). The same shape is used for `publish-workflow-version` in Phase 6:
+Build the `connections` JSON from the selected aliases. It's a nested object — each alias maps to an object holding a `connectionId` (never a bare string). The same shape is used when binding connections on the draft in Phase 6:
 
 ```json
 {
@@ -371,23 +373,17 @@ zapier-sdk --experimental create-workflow "<workflow-name>" \
 
 Omit `--private` only if the user explicitly wants the workflow visible to the broader account.
 
-Capture the returned workflow ID. Then decide how to ship the code:
+Capture the returned workflow ID. All publishing goes through the workflow's **draft** — do not use `publish-workflow-version`. Fork a draft on the new container:
 
-- **Direct publish (the default below):** publish the first version straight away with `publish-workflow-version`. This is the legitimate no-open-draft case — the container was just created, so no draft exists to publish past.
-- **Stage as a draft for review:** if the user wants to look the workflow over in the Zapier editor before it goes live, put the generated code in a server draft instead of publishing:
+```bash
+zapier-sdk --experimental create-workflow-draft <workflow-id> --json
+```
 
-  ```bash
-  zapier-sdk --experimental create-workflow-draft <workflow-id> --json
-  zapier-sdk --experimental update-workflow-draft <workflow-id> <draft-id> "$SOURCE_FILES" \
-    --draft-revision <draft_revision from the create response> \
-    --json
-  ```
+Capture the draft ID and `draft_revision` from the response. You will load the generated code and its bindings into this draft, then either publish it or hand it to the user for review.
 
-  Pass the same `--dependencies`, `--zapier-durable-version`, `--connections`, `--app-versions`, and `--trigger` values Phase 6 would have passed to the publish. Then hand the user the editor link (`https://zapier.com/durables-editor/<workflow-id>`) to review and publish, or publish on their go-ahead with `publish-workflow-draft <workflow-id> <draft-id> --enabled --json`. Publishing consumes the draft. Skip Phase 7's version read-backs if nothing was published.
+The CLI expects `source_files` as a JSON object, not a path to `workflow.ts`.
 
-For a direct publish, the current SDK CLI expects `source_files` as a JSON object, not a path to `workflow.ts`.
-
-For publish, use the same nested `connections` shape as `run-durable` — each alias maps to an object holding a `connectionId`:
+For connection bindings, use the same nested `connections` shape as `run-durable` — each alias maps to an object holding a `connectionId`:
 
 ```json
 {
@@ -404,8 +400,6 @@ If app implementation/version information is known, build the `--app-versions` p
 }
 ```
 
-Omit the entire `--app-versions` flag when no app implementation/version binding is needed. Likewise, omit `--connections` when the workflow has no connection bindings. Do not pass placeholder text like "if needed" to the CLI.
-
 For trigger-backed workflows, build the `trigger` JSON from Phase 2. Keep `selected_api` version-pinned to the `implementation_id` (for example `GoogleSheetsAPI@2.3.0`) and keep each `params` field shaped to its `value_type` (see Phase 2) — a bare app key or a wrong param shape makes the trigger claim fail silently at publish:
 
 ```json
@@ -417,38 +411,41 @@ For trigger-backed workflows, build the `trigger` JSON from Phase 2. Keep `selec
 }
 ```
 
-A "Webhooks by Zapier" or other catch-hook trigger is a real trigger — publish it with `--trigger` using the config captured in Phase 2, the same as any other app trigger.
+A "Webhooks by Zapier" or other catch-hook trigger is a real trigger — pass it via `--trigger` using the config captured in Phase 2, the same as any other app trigger. For a workflow with no trigger at all — invoked only manually via `trigger-workflow` — omit `--trigger`.
 
-Publish a workflow with no trigger at all — invoked only manually via `trigger-workflow` — by omitting `--trigger`:
+Load the code and bindings into the draft:
 
 ```bash
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
 
-zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
+zapier-sdk --experimental update-workflow-draft <workflow-id> <draft-id> "$SOURCE_FILES" \
+  --draft-revision <draft_revision from the create-workflow-draft response> \
   --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
   --zapier-durable-version '<pinned durable version>' \
-  --connections '<publish connection bindings JSON>' \
+  --connections '<connection bindings JSON>' \
   --app-versions '<app versions JSON if needed>' \
-  --enabled \
+  --trigger '<trigger config JSON, for trigger-backed workflows>' \
   --json
 ```
 
-Publish a trigger-backed workflow by adding `--trigger`:
+Omit the entire `--app-versions` flag when no app implementation/version binding is needed, `--connections` when the workflow has no connection bindings, and `--trigger` for manual-only workflows. Do not pass placeholder text like "if needed" to the CLI. Do not use the old `--trigger-app`, `--trigger-action`, `--trigger-auth`, or `--trigger-params` flags — the current trigger path is the single JSON `--trigger` object.
 
-```bash
-zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
-  --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
-  --zapier-durable-version '<pinned durable version>' \
-  --connections '<publish connection bindings JSON>' \
-  --app-versions '<app versions JSON if needed>' \
-  --trigger '<trigger config JSON>' \
-  --enabled \
-  --json
-```
+Then either publish, or stop for review:
 
-Do not use the old `--trigger-app`, `--trigger-action`, `--trigger-auth`, or `--trigger-params` flags. The current trigger publish path is the single JSON `--trigger` object.
+- **Publish** (the default when the user asked for a deployed workflow), using the `draft_revision` returned by the update:
 
-**If the publish is rejected with a conflict about open drafts**, someone (likely the user, in the Zapier editor) forked a draft on this workflow mid-flow. Never force past it — an open draft always holds unpublished work. Load the draft path instead: put your changes into that draft and publish it (`update-workflow-draft` + `publish-workflow-draft`, per `workflows-modify`), or ask the user how to proceed. Do not use any bypass flag for this.
+  ```bash
+  zapier-sdk --experimental publish-workflow-draft <workflow-id> <draft-id> \
+    --draft-revision <draft_revision from the update response> \
+    --enabled \
+    --json
+  ```
+
+  Pass `--enabled` explicitly: a new container starts disabled, and omitting the flag preserves that — the workflow would publish but never fire. Omit `--enabled` only if the user wants the workflow to stay off. Publishing consumes the draft; to change anything afterwards, fork a new draft (`workflows-modify` covers that flow).
+
+- **Stage for review:** if the user wants to look the workflow over in the Zapier editor before it goes live, stop here and hand them the editor link (`https://zapier.com/durables-editor/<workflow-id>`). They can review and publish from the editor, or tell you to run the publish above. Skip Phase 7's version read-backs if nothing was published.
+
+**On a conflict (revision mismatch)** at update or publish: someone edited the draft between your calls — likely the user, in the editor. Never blind-overwrite. Re-read the draft (`get-workflow-draft`), re-apply on top of the fresh content, and retry with the new `draft_revision`.
 
 ## Phase 7: Verify Deployment
 
@@ -466,7 +463,7 @@ For trigger-backed workflows, verify the trigger actually claimed. The claim is 
 zapier-sdk --experimental get-workflow <workflow-id> --json
 ```
 
-If `enabled` is `false` even though you published with `--enabled`, the trigger claim failed. The most common cause is a `selected_api` that is not version-pinned to the `implementation_id`, or a `params` field with the wrong shape (see Phase 2). Re-publish with a corrected `--trigger` and re-check. Do not report the workflow as deployed until `get-workflow` shows `enabled: true`.
+If `enabled` is `false` even though you published with `--enabled`, the trigger claim failed. The most common cause is a `selected_api` that is not version-pinned to the `implementation_id`, or a `params` field with the wrong shape (see Phase 2). The publish consumed the draft, so fix it through a fresh one: fork a new draft, correct the `--trigger` config via `update-workflow-draft`, publish again, and re-check. Do not report the workflow as deployed until `get-workflow` shows `enabled: true`.
 
 Regardless of trigger type, check the matching entry in `triggers[]` from the `get-workflow --json` read-back above for `details.webhook_url` (re-run the same command if enough time has passed since that read that the claim state could have changed). If present, it is the catch URL external services call — show it to the user plainly; unlike the workflow-level `trigger_url`, it is meant to be shared. Most triggers have no `webhook_url`, and that is normal — do not flag its absence.
 
