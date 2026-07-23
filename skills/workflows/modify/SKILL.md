@@ -40,7 +40,7 @@ zapier-sdk --experimental list-workflow-drafts <workflow-id> --json
 
 The list returns open drafts, most recently edited first.
 
-- **An open draft exists:** use the most recently edited one. It may contain the user's unpublished editor work — your change applies on top of it. If several are open, tell the user and confirm which to use.
+- **An open draft exists:** use the most recently edited one. An open draft always holds unpublished work (publishing consumes drafts, so a leftover one was never published) — your change applies on top of it. If several are open, tell the user and confirm which to use.
 - **No open draft:** create one, forked from the workflow's current live version:
 
 ```bash
@@ -155,7 +155,7 @@ zapier-sdk --experimental publish-workflow-draft <workflow-id> <draft-id> \
   --json
 ```
 
-Publishing the draft creates a new immutable version, advances the live pointer, and rebases the draft onto the new version — the draft stays open and nothing is orphaned. The response contains both the new `version` and the rebased `draft`.
+Publishing the draft creates a new immutable version, advances the live pointer, and **discards the draft** — publish consumes it, so an open draft always means unpublished work. The response contains both the new `version` and the consumed `draft` (`status: "discarded"`). Any further modification starts back at Step 2 and forks a fresh draft from the just-published version.
 
 Publish preserves the workflow's current enabled state when `--enabled` is omitted. Omit it unless the user asked to change the enabled state.
 
@@ -170,7 +170,7 @@ zapier-sdk --experimental get-workflow <workflow-id> --json
 zapier-sdk --experimental list-workflow-versions <workflow-id> --json
 ```
 
-Confirm the newest version reflects the publish, the workflow is still enabled if it should be, and trigger/connection/app-version metadata was preserved. The publish response's `draft.base_version_id` should equal the new `version.id` — that confirms the draft was rebased and the editor won't resurrect stale content. Check the matching entry in `triggers[]` for `details.webhook_url`, regardless of trigger type — if present, it's the catch URL external services call and is meant to be shared, unlike the workflow-level `trigger_url`; most triggers have none, and that is normal. If the change is hard to validate without a live trigger fire, tell the user exactly what test event to send and what result to expect.
+Confirm the newest version reflects the publish, the workflow is still enabled if it should be, and trigger/connection/app-version metadata was preserved. The publish response's `draft.status` should be `discarded` — publish consumed the draft, so no open draft is left behind for the editor (or a later agent session) to resurrect stale content from. Check the matching entry in `triggers[]` for `details.webhook_url`, regardless of trigger type — if present, it's the catch URL external services call and is meant to be shared, unlike the workflow-level `trigger_url`; most triggers have none, and that is normal. If the change is hard to validate without a live trigger fire, tell the user exactly what test event to send and what result to expect.
 
 Finish by reporting:
 
