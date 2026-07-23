@@ -4,9 +4,9 @@ description: Modify and republish an existing durable workflow using the Zapier 
 license: MIT
 metadata:
   author: zapier
-  version: "1.1.3"
-  sdk_cli_min: "0.54.3"
-  sdk_cli_validated: "0.54.3"
+  version: "1.2.0"
+  sdk_cli_min: "0.56.2"
+  sdk_cli_validated: "0.66.1"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -78,7 +78,7 @@ Run the workflow:
 ```bash
 zapier-sdk --experimental run-durable "$SOURCE_FILES" \
   --dependencies '<deps from fetched version>' \
-  --zapier_durable_version '<durable version from fetched version>' \
+  --zapier-durable-version '<durable version from fetched version>' \
   --connections '<connection bindings JSON if needed>' \
   --input '<synthetic input JSON>' \
   --private
@@ -114,16 +114,24 @@ Publish:
 ```bash
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
   --dependencies '<deps from fetched version>' \
-  --zapier_durable_version '<durable version from fetched version>' \
+  --zapier-durable-version '<durable version from fetched version>' \
   --connections '<connection bindings from fetched version>' \
-  --app_versions '<app version bindings from fetched version>' \
+  --app-versions '<app version bindings from fetched version>' \
   --trigger '<trigger config from fetched version>' \
   --json
 ```
 
-Use the fetched workflow's enabled state when publishing. If the workflow was enabled before the edit, either omit `--enabled` or pass bare `--enabled` because publish defaults to enabled. If the workflow was disabled before the edit, add `--enabled false`; do not use `--enabled=false` or `--no-enabled`. Do not accidentally re-enable a disabled workflow.
+`--enabled` is a no-argument boolean switch, not a flag that takes a value: `--enabled false` is parsed as bare `--enabled` (enabling the workflow) with a stray `false` token that is silently dropped, `--enabled=false` and `--no-enabled` are both rejected as unknown options. There is no way to publish directly into a disabled state.
 
-Omit `--connections`, `--app_versions`, or `--trigger` only when the fetched metadata confirms the workflow version does not use that field. If the fetched metadata includes trigger, connection, or app-version configuration but the shape cannot be mapped to the current publish flags, stop before publishing and tell the user the workflow needs SDK confirmation rather than silently dropping metadata.
+If the workflow was enabled before the edit, either omit `--enabled` or pass bare `--enabled` — publish defaults to enabled either way. If the workflow was disabled before the edit, publish normally (it will come back enabled) and then immediately call `disable-workflow <workflow-id>` to restore the disabled state:
+
+```bash
+zapier-sdk --experimental disable-workflow <workflow-id> --json
+```
+
+Do not skip this step — a disabled workflow that gets republished without it will accidentally go live.
+
+Omit `--connections`, `--app-versions`, or `--trigger` only when the fetched metadata confirms the workflow version does not use that field. If the fetched metadata includes trigger, connection, or app-version configuration but the shape cannot be mapped to the current publish flags, stop before publishing and tell the user the workflow needs SDK confirmation rather than silently dropping metadata.
 
 Do not use the old trigger republish flags (`--trigger-app`, `--trigger-action`, `--trigger-auth`, `--trigger-params`). The current trigger publish path is the single JSON `--trigger` object.
 
