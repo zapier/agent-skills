@@ -186,7 +186,7 @@ zapier-sdk --experimental get-workflow <workflow-id> --json
 zapier-sdk --experimental list-workflow-versions <workflow-id> --json
 ```
 
-Confirm the newest version reflects the publish, the workflow is still enabled if it should be, and trigger/connection/app-version metadata was preserved. The publish response's `draft.status` should be `discarded` — publish consumed the draft, so no open draft is left behind for the editor (or a later agent session) to resurrect stale content from. Check the matching entry in `triggers[]` for `details.webhook_url`, regardless of trigger type — if present, it's the catch URL external services call and is meant to be shared, unlike the workflow-level `trigger_url`; most triggers have none, and that is normal. If the change is hard to validate without a live trigger fire, tell the user exactly what test event to send and what result to expect.
+Confirm the newest version reflects the publish, the workflow is still enabled if it should be, and trigger/connection/app-version metadata was preserved. Check the matching entry in `triggers[]` for `details.webhook_url`, regardless of trigger type — if present, it's the catch URL external services call and is meant to be shared, unlike the workflow-level `trigger_url`; most triggers have none, and that is normal. If the change is hard to validate without a live trigger fire, tell the user exactly what test event to send and what result to expect.
 
 Finish by reporting:
 
