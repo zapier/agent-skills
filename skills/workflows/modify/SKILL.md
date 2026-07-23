@@ -73,6 +73,22 @@ zapier-sdk --experimental get-workflow-version <workflow-id> <base_version_id fr
 
 If the draft's `source_files`, trigger, connections, or app versions differ from the base version, the draft holds unpublished work. Note a short summary of the differences — you'll surface it at confirmation time in Step 6. Never silently publish it and never silently discard it.
 
+**Check the draft isn't stale.** A draft forks from the live version at creation, but the live version can move past it — another open draft may have published, or someone force-published around the drafts. Publishing a stale draft ships its old base content over everything the newer versions changed. Skip this too when you just created the draft; otherwise list the versions and compare the newest version's `id` to the draft's `base_version_id`:
+
+```bash
+zapier-sdk --experimental list-workflow-versions <workflow-id> --json
+```
+
+- **Base is the newest version:** not stale — continue.
+- **Stale, with no unpublished changes** (the divergence check above found none): the draft is a leftover shell of an old version. Do not build on it — discard it, fork a fresh draft from live, tell the user you did, and continue Steps 3–4 on the fresh draft:
+
+  ```bash
+  zapier-sdk --experimental discard-workflow-draft <workflow-id> <draft-id> --json
+  zapier-sdk --experimental create-workflow-draft <workflow-id> --json
+  ```
+
+- **Stale, with unpublished changes:** stop and tell the user. Publishing this draft as-is would revert everything in the versions published since it was forked. The safe path is forking a fresh draft from live and porting the draft's unpublished changes (plus your edit) onto it — offer to do that, and get an explicit choice between porting and publishing the stale draft anyway. Never pick for them.
+
 ## Step 4: Make The Edit
 
 Prefer editing an existing local workflow file if one exists. Otherwise, write `source_files["workflow.ts"]` into a local `workflow.ts` in a workflow-specific directory and edit that copy.
