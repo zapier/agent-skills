@@ -196,7 +196,7 @@ zapier-sdk --experimental update-workflow-draft <workflow-id> <draft-id> "$SOURC
 
 Omitted fields keep their stored draft values, so only pass `--trigger`, `--connections`, `--app-versions`, `--dependencies`, or `--zapier-durable-version` when the edit changes them. Passing `null` for `--trigger`, `--connections`, or `--app-versions` clears the stored value — never do that to "skip" a field.
 
-**If the user chose to publish later,** stop here: report the draft ID and the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response — so they can review and publish from the editor, or ask you to publish in a follow-up. Include the slug and source-file segments exactly; a link ending at the slug does not resolve.
+**If the user chose to publish later,** stop here: report the draft ID and the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response — so they can review and publish from the editor, or ask you to publish in a follow-up. The final segment must be one of the draft's `source_files` keys (`workflow.ts` in this skill's flow). Do not link to the slug alone: the editor misreads a slug-only URL as a filename and falls back to the most recently edited open draft, which may not be this one.
 
 **Otherwise publish now.** The update response returns the new `draft_revision`; publish with it:
 
