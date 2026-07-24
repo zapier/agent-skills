@@ -383,7 +383,7 @@ Capture the returned workflow ID. Then decide how to ship the code:
     --json
   ```
 
-  Pass the same `--dependencies`, `--zapier-durable-version`, `--connections`, `--app-versions`, and `--trigger` values Phase 6 would have passed to the publish. Then hand the user the editor link (`https://zapier.com/durables-editor/<workflow-id>`) to review and publish, or publish on their go-ahead with `publish-workflow-draft <workflow-id> <draft-id> --enabled --json`. Publishing consumes the draft. Skip Phase 7's version read-backs if nothing was published.
+  Pass the same `--dependencies`, `--zapier-durable-version`, `--connections`, `--app-versions`, and `--trigger` values Phase 6 would have passed to the publish. Then hand the user the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response (include the slug and source-file segments exactly; a link ending at the slug does not resolve) — to review and publish, or publish on their go-ahead with `publish-workflow-draft <workflow-id> <draft-id> --enabled --json`. Publishing consumes the draft. Skip Phase 7's version read-backs if nothing was published.
 
 For a direct publish, the current SDK CLI expects `source_files` as a JSON object, not a path to `workflow.ts`.
 

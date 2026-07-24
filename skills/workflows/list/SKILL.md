@@ -54,7 +54,7 @@ A workflow's published state is not the whole story — it may also have open se
 zapier-sdk --experimental list-workflow-drafts <workflow-id> --json
 ```
 
-Surface each open draft's `slug`, `last_edited_at`, and `last_edited_by_user_id`, and whether its `base_version_id` matches the newest published version (an older base means the draft predates the current live version). Do not fetch drafts for every workflow in a plain listing — it is one request per workflow; do it on request or for the workflows under discussion.
+Surface each open draft's `slug`, `last_edited_at`, and `last_edited_by_user_id`, and whether its `base_version_id` matches the newest published version (an older base means the draft predates the current live version). Include the draft's editor link: `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts` (include the slug and source-file segments exactly; a link ending at the slug does not resolve). Do not fetch drafts for every workflow in a plain listing — it is one request per workflow; do it on request or for the workflows under discussion.
 
 ## Ownership Scoping
 
