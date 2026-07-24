@@ -122,12 +122,12 @@ If global npm installs fail because of permissions, tell the user to fix their N
 ```bash
 zapier-sdk --experimental --help
 zapier-sdk --experimental create-workflow --help
+zapier-sdk --experimental publish-workflow-version --help
 zapier-sdk --experimental run-durable --help
 zapier-sdk --experimental list-triggers --help
 zapier-sdk --experimental get-workflow-run --help
 zapier-sdk --experimental trigger-workflow --help
 zapier-sdk --experimental list-workflow-drafts --help
-zapier-sdk --experimental update-workflow-draft --help
 zapier-sdk --experimental publish-workflow-draft --help
 ```
 
@@ -137,6 +137,7 @@ Expected output includes the Code Workflows command group, including commands su
 create-workflow
 list-workflows
 run-durable
+publish-workflow-version
 list-workflow-runs
 get-workflow-run
 list-workflow-drafts
@@ -150,7 +151,8 @@ discard-workflow-draft
 The command-specific help must expose the flags the companion skills depend on:
 
 - `create-workflow --help` includes `--private`.
-- `update-workflow-draft --help` includes `--draft-revision`, `--connections`, `--app-versions`, and `--trigger`.
+- `publish-workflow-version --help` includes `--connections`, `--app_versions`, and `--trigger`.
+- `update-workflow-draft --help` includes `--draft-revision`.
 - `publish-workflow-draft --help` includes `--draft-revision` and `--enabled`.
 - `run-durable --help` includes `--connections` and `--private`.
 - `list-triggers --help` succeeds.
@@ -170,7 +172,7 @@ If `zapier-sdk` exists but the Code Workflows command group or required command-
 ```bash
 npm install -g @zapier/zapier-sdk-cli@latest
 zapier-sdk --experimental --help
-zapier-sdk --experimental publish-workflow-draft --help
+zapier-sdk --experimental publish-workflow-version --help
 ```
 
 Retry the command-specific help checks once after updating. Proceed only after the Code Workflows command group and required flags are visible. If the required flags are still missing after updating, stop and report the installed CLI version and latest npm version; do not install companion skills into a workspace that cannot run their documented command shapes.

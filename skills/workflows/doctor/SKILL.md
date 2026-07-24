@@ -89,6 +89,7 @@ zapier-sdk --experimental <candidate-command> --help
 Confirm that the SDK CLI exposes a clear way to perform these operations for the workflow skill bundle:
 
 - Create a workflow container.
+- Publish a workflow version.
 - List a workflow's open drafts.
 - Create (fork) a workflow draft.
 - Read a workflow draft.
@@ -102,14 +103,14 @@ Confirm that the SDK CLI exposes a clear way to perform these operations for the
 - Discover or list app triggers.
 - Trigger a workflow.
 - Control workflow visibility, including private workflow creation or the current equivalent.
-- Bind app connections for test runs and workflow drafts.
+- Bind app connections for test runs and published workflow versions.
 - Bind app implementation/version metadata when required.
-- Provide trigger configuration on workflow drafts.
+- Provide trigger configuration for published workflow versions.
 - Pass workflow input when running or triggering workflows.
-- Control enabled state when publishing workflow drafts.
+- Control enabled state when publishing workflow versions.
 - Run synthetic durable tests privately or with the current equivalent behavior.
 
-All publishing in this bundle goes through drafts: `publish-workflow-draft` publishes and consumes the draft, so nothing stale is left behind. The direct version-publish command (`publish-workflow-version`) is not part of the bundle contract — no workflow skill uses it, the server rejects it with a conflict while any draft is open, and the API behind it is slated for removal. Do not use it or suggest it. The bundle invariant: **never publish past an open draft**.
+Publishing has two paths. `publish-workflow-draft` is the preferred one — it publishes and consumes the draft, so nothing stale is left behind. Direct `publish-workflow-version` is for no-open-draft cases only, such as the first publish of a brand-new workflow or a headless deploy-from-source flow; the server rejects it with a conflict while any draft is open. The bundle invariant: **never publish past an open draft**.
 
 When the current SDK help output is clear, prefer it over the example commands below. If discovery is ambiguous or a required capability appears absent, treat compatibility as unconfirmed and refresh the workflow skill bundle.
 
@@ -117,6 +118,7 @@ Example commands from the validated SDK CLI surface:
 
 ```bash
 zapier-sdk --experimental create-workflow --help
+zapier-sdk --experimental publish-workflow-version --help
 zapier-sdk --experimental run-durable --help
 zapier-sdk --experimental list-workflows --help
 zapier-sdk --experimental list-workflow-runs --help
@@ -137,6 +139,7 @@ zapier-sdk --experimental discard-workflow-draft --help
 Example flags from the validated SDK CLI surface:
 
 - `create-workflow`: `--private`
+- `publish-workflow-version`: `--connections`, `--app_versions`, `--trigger`, `--enabled`
 - `update-workflow-draft`: `--draft-revision`, `--connections`, `--app-versions`, `--trigger`
 - `publish-workflow-draft`: `--draft-revision`, `--enabled`
 - `run-durable`: `--connections`, `--input`, `--private`
