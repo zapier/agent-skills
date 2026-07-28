@@ -156,14 +156,14 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --dependencies '<deps from fetched version>' \
   --zapier_durable_version '<durable version from fetched version>' \
   --connections '<connection bindings from fetched version>' \
-  --app_versions '<app version bindings from fetched version>' \
+  --app-versions '<app version bindings from fetched version>' \
   --trigger '<trigger config from fetched version>' \
   --json
 ```
 
 Use the fetched workflow's enabled state when publishing. If the workflow was enabled before the edit, either omit `--enabled` or pass bare `--enabled` because publish defaults to enabled. If the workflow was disabled before the edit, add `--enabled false`; do not use `--enabled=false` or `--no-enabled`. Do not accidentally re-enable a disabled workflow.
 
-Omit `--connections`, `--app_versions`, or `--trigger` only when the fetched metadata confirms the workflow version does not use that field. If the fetched metadata includes trigger, connection, or app-version configuration but the shape cannot be mapped to the current publish flags, stop before publishing and tell the user the workflow needs SDK confirmation rather than silently dropping metadata.
+Omit `--connections`, `--app-versions`, or `--trigger` only when the fetched metadata confirms the workflow version does not use that field. If the fetched metadata includes trigger, connection, or app-version configuration but the shape cannot be mapped to the current publish flags, stop before publishing and tell the user the workflow needs SDK confirmation rather than silently dropping metadata.
 
 **On a 409 open-draft conflict:** the server rejects direct publishes when the workflow has open draft(s) — publishing past a draft would let the draft's later publish silently revert your change. The error lists the blocking drafts (`meta.open_drafts`). A draft appearing here after Step 2 found none means someone (likely the user, in the editor) opened one mid-flight. Tell the user and offer:
 
