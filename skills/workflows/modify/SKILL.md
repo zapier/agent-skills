@@ -154,7 +154,7 @@ SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}
 ```bash
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
   --dependencies '<deps from fetched version>' \
-  --zapier_durable_version '<durable version from fetched version>' \
+  --zapier-durable-version '<durable version from fetched version>' \
   --connections '<connection bindings from fetched version>' \
   --app-versions '<app version bindings from fetched version>' \
   --trigger '<trigger config from fetched version>' \
