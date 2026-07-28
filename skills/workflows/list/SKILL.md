@@ -5,8 +5,8 @@ license: MIT
 metadata:
   author: zapier
   version: "1.2.0"
-  sdk_cli_min: "0.55.0"
-  sdk_cli_validated: "0.55.0"
+  sdk_cli_min: "0.67.4"
+  sdk_cli_validated: "0.67.5"
   refresh_source: "zapier/agent-skills"
 ---
 

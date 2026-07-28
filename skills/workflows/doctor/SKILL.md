@@ -5,8 +5,8 @@ license: MIT
 metadata:
   author: zapier
   version: "1.3.0"
-  sdk_cli_min: "0.55.0"
-  sdk_cli_validated: "0.55.0"
+  sdk_cli_min: "0.67.4"
+  sdk_cli_validated: "0.67.5"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -45,7 +45,7 @@ This freshness check is independent of the SDK command-surface compatibility che
 
 Check the workflow skill bundle as one unit. Do not maintain separate compatibility checks for `workflows-install`, `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`; users will normally use these skills together, and drift in any core workflow SDK surface should refresh the whole bundle.
 
-Current workflow skills use `sdk_cli_min: "0.55.0"` and `sdk_cli_validated: "0.55.0"` unless the installed skills' metadata says otherwise.
+Current workflow skills use `sdk_cli_min: "0.67.4"` and `sdk_cli_validated: "0.67.5"` unless the installed skills' metadata says otherwise.
 
 ## Step 2: Check SDK CLI Versions
 
