@@ -404,7 +404,7 @@ If app implementation/version information is known, build the `--app-versions` p
 }
 ```
 
-Omit the entire `--app_versions` flag when no app implementation/version binding is needed. Likewise, omit `--connections` when the workflow has no connection bindings. Do not pass placeholder text like "if needed" to the CLI.
+Omit the entire `--app-versions` flag when no app implementation/version binding is needed. Likewise, omit `--connections` when the workflow has no connection bindings. Do not pass placeholder text like "if needed" to the CLI.
 
 For trigger-backed workflows, build the `trigger` JSON from Phase 2. Keep `selected_api` version-pinned to the `implementation_id` (for example `GoogleSheetsAPI@2.3.0`) and keep each `params` field shaped to its `value_type` (see Phase 2) — a bare app key or a wrong param shape makes the trigger claim fail silently at publish:
 
@@ -428,7 +428,7 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
   --zapier-durable-version '<pinned durable version>' \
   --connections '<publish connection bindings JSON>' \
-  --app_versions '<app versions JSON if needed>' \
+  --app-versions '<app versions JSON if needed>' \
   --enabled \
   --json
 ```
@@ -440,7 +440,7 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
   --zapier-durable-version '<pinned durable version>' \
   --connections '<publish connection bindings JSON>' \
-  --app_versions '<app versions JSON if needed>' \
+  --app-versions '<app versions JSON if needed>' \
   --trigger '<trigger config JSON>' \
   --enabled \
   --json

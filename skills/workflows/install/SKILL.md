@@ -151,7 +151,7 @@ discard-workflow-draft
 The command-specific help must expose the flags the companion skills depend on:
 
 - `create-workflow --help` includes `--private`.
-- `publish-workflow-version --help` includes `--connections`, `--app_versions`, and `--trigger`.
+- `publish-workflow-version --help` includes `--connections`, `--app-versions`, and `--trigger`.
 - `update-workflow-draft --help` includes `--draft-revision`.
 - `publish-workflow-draft --help` includes `--draft-revision` and `--enabled`.
 - `run-durable --help` includes `--connections` and `--private`.

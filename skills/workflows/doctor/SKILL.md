@@ -139,7 +139,7 @@ zapier-sdk --experimental discard-workflow-draft --help
 Example flags from the validated SDK CLI surface:
 
 - `create-workflow`: `--private`
-- `publish-workflow-version`: `--connections`, `--app_versions`, `--trigger`, `--enabled`
+- `publish-workflow-version`: `--connections`, `--app-versions`, `--trigger`, `--enabled`
 - `update-workflow-draft`: `--draft-revision`, `--connections`, `--app-versions`, `--trigger`
 - `publish-workflow-draft`: `--draft-revision`, `--enabled`
 - `run-durable`: `--connections`, `--input`, `--private`
