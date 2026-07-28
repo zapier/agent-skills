@@ -5,8 +5,8 @@ license: MIT
 metadata:
   author: zapier
   version: "1.4.0"
-  sdk_cli_min: "0.56.2"
-  sdk_cli_validated: "0.66.1"
+  sdk_cli_min: "0.67.4"
+  sdk_cli_validated: "0.67.5"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -371,7 +371,21 @@ zapier-sdk --experimental create-workflow "<workflow-name>" \
 
 Omit `--private` only if the user explicitly wants the workflow visible to the broader account.
 
-Capture the returned workflow ID. Then publish the version. The current SDK CLI expects `source_files` as a JSON object, not a path to `workflow.ts`.
+Capture the returned workflow ID. Then decide how to ship the code:
+
+- **Direct publish (the default below):** publish the first version straight away with `publish-workflow-version`. This is the legitimate no-open-draft case — the container was just created, so no draft exists to publish past.
+- **Stage as a draft for review:** if the user wants to look the workflow over in the Zapier editor before it goes live, put the generated code in a server draft instead of publishing:
+
+  ```bash
+  zapier-sdk --experimental create-workflow-draft <workflow-id> --json
+  zapier-sdk --experimental update-workflow-draft <workflow-id> <draft-id> "$SOURCE_FILES" \
+    --draft-revision <draft_revision from the create response> \
+    --json
+  ```
+
+  Pass the same `--dependencies`, `--zapier-durable-version`, `--connections`, `--app-versions`, and `--trigger` values Phase 6 would have passed to the publish. Then hand the user the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response; the final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow) — to review and publish, or publish on their go-ahead with `publish-workflow-draft <workflow-id> <draft-id> --enabled --json`. Publishing consumes the draft. Skip Phase 7's version read-backs if nothing was published.
+
+For a direct publish, the current SDK CLI expects `source_files` as a JSON object, not a path to `workflow.ts`.
 
 For publish, use the same nested `connections` shape as `run-durable` — each alias maps to an object holding a `connectionId`:
 
@@ -433,6 +447,8 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
 ```
 
 Do not use the old `--trigger-app`, `--trigger-action`, `--trigger-auth`, or `--trigger-params` flags. The current trigger publish path is the single JSON `--trigger` object.
+
+**If the publish is rejected with a conflict about open drafts**, someone (likely the user, in the Zapier editor) forked a draft on this workflow mid-flow. An open draft always holds unpublished work, so never publish past it silently. Tell the user and offer the same choices as `workflows-modify`: fold your changes into that draft and publish it (`update-workflow-draft` + `publish-workflow-draft`), or — with their explicit confirmation, since it drops the draft's unpublished work — discard the draft (`discard-workflow-draft`) and retry the direct publish.
 
 ## Phase 7: Verify Deployment
 

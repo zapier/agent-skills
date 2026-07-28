@@ -4,9 +4,9 @@ description: Show run history for a specific durable workflow using the Zapier S
 license: MIT
 metadata:
   author: zapier
-  version: "1.1.0"
-  sdk_cli_min: "0.54.3"
-  sdk_cli_validated: "0.54.3"
+  version: "1.2.0"
+  sdk_cli_min: "0.67.4"
+  sdk_cli_validated: "0.67.5"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -61,3 +61,13 @@ zapier-sdk --experimental get-trigger-run <trigger-id> --json
 ```
 
 Summarize the failure, status, timing, input, output, and any step error details that appear in the response. Avoid dumping raw JSON unless the user asks for it.
+
+## Draft State
+
+Runs execute published versions — unpublished draft edits never show up in run history. If the user expects a recent change to be reflected in runs and it isn't, check for an open draft holding that change:
+
+```bash
+zapier-sdk --experimental list-workflow-drafts <workflow-id> --json
+```
+
+If an open draft exists, tell the user their change is unpublished (note `last_edited_at` and the editor link) rather than concluding the workflow is broken.
