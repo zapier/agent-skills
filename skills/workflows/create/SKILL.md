@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.4.0"
+  version: "1.4.1"
   sdk_cli_min: "0.67.4"
   sdk_cli_validated: "0.67.5"
   refresh_source: "zapier/agent-skills"
@@ -234,26 +234,15 @@ If you add a build script, use `--skipLibCheck` for now to avoid type-check fail
 - Use Zod for input validation when the workflow has input.
 - Keep external side effects (app actions, fetches) inside `ctx.step` calls.
 - Make each app action exactly **one** `ctx.step` whose body is a single `return sdk.runAction({...})` call — one `runAction` per step.
-- Group validation, input normalization, simple guards, data shaping into steps as needed.
+- Group validation, simple guards, and data shaping into steps as needed.
 - Use connection aliases, not raw connection IDs, inside workflow code.
 - Reference a prior step's output with `stepVar.data[0].field` for the first result, or `stepVar.data` for the whole array.
-- Normalize manual input before Zod validation. In the current `run-durable` path, input may arrive as a JSON string rather than an already-parsed object.
+- Validate workflow input with Zod before using it. `run-durable` delivers input as parsed JSON.
 
-Use this helper pattern for workflows with input:
-
-```typescript
-function normalizeInput(rawInput: unknown): unknown {
-  if (typeof rawInput === "string") {
-    return JSON.parse(rawInput);
-  }
-  return rawInput;
-}
-```
-
-Then parse the normalized value:
+Parse workflow input directly:
 
 ```typescript
-const input = InputSchema.parse(normalizeInput(rawInput));
+const input = InputSchema.parse(rawInput);
 ```
 
 ### Visualizer-Friendly Structure
