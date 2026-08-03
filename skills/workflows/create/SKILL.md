@@ -101,6 +101,8 @@ Default to looking for a trigger in the build instruction. Infer from intent cue
 
 **If the start mode is ambiguous — no clear trigger cue and no explicit manual cue — ask the user: run it manually on-demand, or attach a trigger (and which)? Never silently assume `manual` just because no trigger was named.** A triggerless workflow published on an unconfirmed assumption is the exact failure this classification exists to prevent.
 
+This decision is **required even though the platform records `start_mode` as an optional field** and does not yet enforce it on every account — the optionality is a staged-rollout artifact (enforcement is per-account and flag-gated), not permission to skip the decision. Never publish without a start mode the user, or an unambiguous build instruction, chose.
+
 Carry the chosen start mode forward: it is confirmed in the Phase 3 build plan, drives the publish in Phase 6, and is the gate for the Phase 7 verification.
 
 ## Phase 2: Discover Apps, Connections, Actions, Triggers, And Fields
@@ -442,6 +444,8 @@ A "Webhooks by Zapier" or other catch-hook trigger is a real trigger — publish
 
 How you publish follows directly from the **start mode** confirmed in Phase 3 — the two are not co-equal defaults; you commit to the one the user chose.
 
+**Before publishing, confirm the payload matches the declared start mode:** `Start mode: trigger` means the publish passes `--trigger`; `Start mode: manual` means it omits `--trigger`. These must agree. The platform's start-mode gate is strict — it matches the declared mode against trigger presence (a trigger present is "triggered"; none is "manual") and rejects a mismatch, or an unspecified mode once the gate is enabled for the account, with a `400`. Catch any disagreement here, before the publish call, so the publish is internally consistent and gate-ready — do not discover it only in Phase 7.
+
 **`Start mode: trigger`** — publish with `--trigger`, using the config built above:
 
 ```bash
@@ -470,6 +474,8 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
 ```
 
 Do not use the old `--trigger-app`, `--trigger-action`, `--trigger-auth`, or `--trigger-params` flags. The current trigger publish path is the single JSON `--trigger` object.
+
+**If the publish is rejected with a `400` about `start_mode`**, the account has the strict start-mode gate enabled. If it reports a *mismatch*, the payload's trigger presence disagrees with the declared mode — fix the payload per the consistency check above and retry. If it reports the mode is *unspecified*, this CLI publish path cannot yet declare `start_mode` explicitly and the account's gate is ahead of that support — tell the user and stop rather than guessing a mode to satisfy the gate.
 
 **If the publish is rejected with a conflict about open drafts**, someone (likely the user, in the Zapier editor) forked a draft on this workflow mid-flow. An open draft always holds unpublished work, so never publish past it silently. Tell the user and offer the same choices as `workflows-modify`: fold your changes into that draft and publish it (`update-workflow-draft` + `publish-workflow-draft`), or — with their explicit confirmation, since it drops the draft's unpublished work — discard the draft (`discard-workflow-draft`) and retry the direct publish.
 
