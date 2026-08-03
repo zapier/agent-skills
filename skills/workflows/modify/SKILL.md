@@ -157,7 +157,7 @@ Wait for explicit confirmation, then build `source_files`:
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
 ```
 
-**Before publishing on either path, confirm the payload matches the start mode captured in Step 3:** a `trigger`-mode workflow must publish with its `--trigger` config present; a `manual`-mode workflow must publish without one (unless the request is explicitly to change the mode, in which case the payload must match the intended new mode). The platform's start-mode gate is strict and rejects a publish whose declared mode and trigger presence disagree with a `400` — so a `trigger`-mode republish that dropped `--trigger` is both a silent-triggerless regression and a gate violation. Catch it here, before publishing. (If a publish is rejected with a `400` about `start_mode`, the account has the strict gate enabled: a *mismatch* means the payload contradicts the mode — fix and retry; an *unspecified* rejection means this CLI path cannot yet declare `start_mode` and the gate is ahead of that support — tell the user and stop.)
+**Before publishing on either path, confirm the payload matches the start mode captured in Step 3:** a `trigger`-mode workflow must publish with its `--trigger` config present; a `manual`-mode workflow must publish without one (unless the request is explicitly to change the mode, in which case the payload must match the intended new mode). A `trigger`-mode republish that dropped `--trigger` is a silent-triggerless regression — the republished workflow must actually carry the trigger it was meant to keep. Catch it here, before publishing.
 
 ### Step 6A: Direct Publish
 
