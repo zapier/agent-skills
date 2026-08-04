@@ -76,8 +76,10 @@ zapier-sdk --experimental get-workflow <workflow-id> --json
 
 **Determine the current start mode from this read-back — a modify must never silently change it.** A workflow has one of two start modes, and re-publishing without carrying it forward is exactly how a triggered workflow silently becomes triggerless:
 
-- **`trigger`** — the fetched version carries trigger config (a non-empty `triggers[]` on `get-workflow`, and a `trigger` object in the fetched version/draft source). Capture the full `trigger` config verbatim; it must be re-passed on publish (Step 6) or the new version drops the trigger.
-- **`manual`** — the fetched version has an empty `triggers[]` and no `trigger` config. It runs on-demand only.
+- **`trigger`** — **either** signal shows a trigger: the fetched version/draft source carries a `trigger` object, **or** `get-workflow`'s `triggers[]` is non-empty. Capture the full `trigger` config verbatim; it must be re-passed on publish (Step 6) or the new version drops the trigger.
+- **`manual`** — **both** signals are absent: no `trigger` object in the fetched source **and** an empty `triggers[]`. It runs on-demand only.
+
+If the two signals disagree — most importantly a saved `trigger` config but an empty or stale live `triggers[]` (a claim that failed, is pending, or was disabled) — do **not** label it manual. Preserve the trigger and stop to reconcile with the user: dropping a saved trigger is the silent-triggerless regression this determination guards against.
 
 `triggers[]` and the fetched trigger config are the authority for the current mode — the platform's start-mode input (the write-only `manual` flag) is never surfaced on any read-back, so do not look for it. Unless the user's request is explicitly to change the start mode (add a trigger to a manual workflow, or remove one), the modify preserves it — carry the captured mode through the edit, publish, and verification.
 
