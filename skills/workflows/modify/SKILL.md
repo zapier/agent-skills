@@ -157,7 +157,7 @@ Wait for explicit confirmation, then build `source_files`:
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
 ```
 
-**Before publishing on either path, confirm the payload matches the start mode captured in Step 3:** a `trigger`-mode workflow must publish with its `--trigger` config present; a `manual`-mode workflow must publish without one (unless the request is explicitly to change the mode, in which case the payload must match the intended new mode). A `trigger`-mode republish that dropped `--trigger` is a silent-triggerless regression — the republished workflow must actually carry the trigger it was meant to keep. Catch it here, before publishing.
+**Before publishing on either path, confirm the version you are about to publish matches the start mode captured in Step 3:** a `trigger`-mode workflow's published version must carry its trigger; a `manual`-mode workflow's must carry none (unless the request is explicitly to change the mode, in which case match the intended new mode). A `trigger`-mode republish that loses its trigger is a silent-triggerless regression. *How* you confirm this differs by path — the trigger is a `--trigger` flag on a direct publish but lives in the stored draft on the draft path — so see the path-specific check in 6A and 6B below.
 
 ### Step 6A: Direct Publish
 
@@ -174,6 +174,8 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
 Use the fetched workflow's enabled state when publishing. If the workflow was enabled before the edit, either omit `--enabled` or pass bare `--enabled` because publish defaults to enabled. If the workflow was disabled before the edit, add `--enabled false`; do not use `--enabled=false` or `--no-enabled`. Do not accidentally re-enable a disabled workflow.
 
 Omit `--connections`, `--app-versions`, or `--trigger` only when the fetched metadata confirms the workflow version does not use that field. If the fetched metadata includes trigger, connection, or app-version configuration but the shape cannot be mapped to the current publish flags, stop before publishing and tell the user the workflow needs SDK confirmation rather than silently dropping metadata.
+
+**Start-mode check (direct publish):** a `trigger`-mode workflow must include `--trigger` in this call — omitting it publishes a triggerless version and silently drops the trigger. A `manual`-mode workflow must omit `--trigger`. (When the request is to change the mode, match the intended new mode instead.)
 
 **On a 409 open-draft conflict:** the server rejects direct publishes when the workflow has open draft(s) — publishing past a draft would let the draft's later publish silently revert your change. The error lists the blocking drafts (`meta.open_drafts`). A draft appearing here after Step 2 found none means someone (likely the user, in the editor) opened one mid-flight. Tell the user and offer:
 
@@ -205,6 +207,8 @@ zapier-sdk --experimental update-workflow-draft <workflow-id> <draft-id> "$SOURC
 ```
 
 Omitted fields keep their stored draft values, so only pass `--trigger`, `--connections`, `--app-versions`, `--dependencies`, or `--zapier-durable-version` when the edit changes them. Passing `null` for `--trigger`, `--connections`, or `--app-versions` clears the stored value — never do that to "skip" a field.
+
+**Start-mode check (draft path):** the trigger lives in the stored draft and `publish-workflow-draft` takes no trigger flag — it publishes whatever the draft holds. So a correct `trigger`-mode draft publish has *no* `--trigger` at publish time; that is expected, not a dropped trigger. The check is instead: immediately before `publish-workflow-draft`, confirm the draft's stored `trigger` still matches the captured (or intended) start mode — a `trigger`-mode draft still carries its trigger, a `manual`-mode draft none. Read it back with `get-workflow-draft` if unsure. Clearing it with `--trigger null` on the `update-workflow-draft` above is exactly how a `trigger`-mode workflow silently becomes manual.
 
 **If the user chose to publish later,** stop here: report the draft ID and the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response — so they can review and publish from the editor, or ask you to publish in a follow-up. The final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow).
 
