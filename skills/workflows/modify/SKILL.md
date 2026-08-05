@@ -4,9 +4,9 @@ description: Modify and republish an existing durable workflow using the Zapier 
 license: MIT
 metadata:
   author: zapier
-  version: "2.1.0"
-  sdk_cli_min: "0.67.4"
-  sdk_cli_validated: "0.67.5"
+  version: "2.2.0"
+  sdk_cli_min: "0.0.0-TODO-COSUB-1023"  # PLACEHOLDER — set to first @zapier/zapier-sdk-cli with --manual (COSUB-1023 / MR 483); fill before merge
+  sdk_cli_validated: "0.0.0-TODO-COSUB-1023"  # PLACEHOLDER — see sdk_cli_min
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -159,7 +159,7 @@ Wait for explicit confirmation, then build `source_files`:
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
 ```
 
-**Before publishing on either path, confirm the version you are about to publish matches the start mode captured in Step 3:** a `trigger`-mode workflow's published version must carry its trigger; a `manual`-mode workflow's must carry none (unless the request is explicitly to change the mode, in which case match the intended new mode). A `trigger`-mode republish that loses its trigger is a silent-triggerless regression. *How* you confirm this differs by path — the trigger is a `--trigger` flag on a direct publish but lives in the stored draft on the draft path — so see the path-specific check in 6A and 6B below.
+**Before publishing on either path, confirm the version you are about to publish matches the start mode captured in Step 3:** a `trigger`-mode workflow's published version must carry its trigger and be published **without** `--manual`; a `manual`-mode workflow's must carry no trigger and be published **with** `--manual` (unless the request is explicitly to change the mode, in which case match the intended new mode). Pass **exactly one** of trigger / `--manual` — the platform contract is a discriminated union and rejects both together as a contradiction. A `trigger`-mode republish that loses its trigger is a silent-triggerless regression. *How* you pass this differs by path — the trigger is a `--trigger` flag on a direct publish but lives in the stored draft on the draft path — so see the path-specific check in 6A and 6B below.
 
 ### Step 6A: Direct Publish
 
@@ -177,7 +177,7 @@ Use the fetched workflow's enabled state when publishing. If the workflow was en
 
 Omit `--connections`, `--app-versions`, or `--trigger` only when the fetched metadata confirms the workflow version does not use that field. If the fetched metadata includes trigger, connection, or app-version configuration but the shape cannot be mapped to the current publish flags, stop before publishing and tell the user the workflow needs SDK confirmation rather than silently dropping metadata.
 
-**Start-mode check (direct publish):** a `trigger`-mode workflow must include `--trigger` in this call — omitting it publishes a triggerless version and silently drops the trigger. A `manual`-mode workflow must omit `--trigger`. (When the request is to change the mode, match the intended new mode instead.)
+**Start-mode check (direct publish):** a `trigger`-mode workflow must include `--trigger` (and **not** `--manual`) in this call — omitting `--trigger` publishes a triggerless version and silently drops the trigger. A `manual`-mode workflow must omit `--trigger` and pass `--manual` instead. Never pass both `--trigger` and `--manual`; the platform contract rejects the combination. (When the request is to change the mode, match the intended new mode instead.)
 
 **On a 409 open-draft conflict:** the server rejects direct publishes when the workflow has open draft(s) — publishing past a draft would let the draft's later publish silently revert your change. The error lists the blocking drafts (`meta.open_drafts`). A draft appearing here after Step 2 found none means someone (likely the user, in the editor) opened one mid-flight. Tell the user and offer:
 
@@ -210,7 +210,7 @@ zapier-sdk --experimental update-workflow-draft <workflow-id> <draft-id> "$SOURC
 
 Omitted fields keep their stored draft values, so only pass `--trigger`, `--connections`, `--app-versions`, `--dependencies`, or `--zapier-durable-version` when the edit changes them. Passing `null` for `--trigger`, `--connections`, or `--app-versions` clears the stored value — never do that to "skip" a field.
 
-**Start-mode check (draft path):** the trigger lives in the stored draft and `publish-workflow-draft` takes no trigger flag — it publishes whatever the draft holds. So a correct `trigger`-mode draft publish has *no* `--trigger` at publish time; that is expected, not a dropped trigger. The check is instead: immediately before `publish-workflow-draft`, confirm the draft's stored `trigger` still matches the captured (or intended) start mode — a `trigger`-mode draft still carries its trigger, a `manual`-mode draft none. Read it back with `get-workflow-draft` if unsure. Clearing it with `--trigger null` on the `update-workflow-draft` above is exactly how a `trigger`-mode workflow silently becomes manual.
+**Start-mode check (draft path):** the trigger lives in the stored draft and `publish-workflow-draft` takes no `--trigger` flag — it publishes whatever the draft holds. So a correct `trigger`-mode draft publish has *no* `--trigger` at publish time; that is expected, not a dropped trigger. First confirm, immediately before `publish-workflow-draft`, that the draft's stored `trigger` still matches the captured (or intended) start mode — a `trigger`-mode draft still carries its trigger, a `manual`-mode draft none (read it back with `get-workflow-draft` if unsure). Then declare the start mode at publish: a `manual`-mode workflow passes `--manual` on `publish-workflow-draft` (below); a `trigger`-mode workflow's draft already holds its trigger, so publish **without** `--manual`. Never combine a stored trigger with `--manual` — the platform contract rejects both together. Clearing the trigger with `--trigger null` on the `update-workflow-draft` above is exactly how a `trigger`-mode workflow silently becomes manual.
 
 **If the user chose to publish later,** stop here: report the draft ID and the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response — so they can review and publish from the editor, or ask you to publish in a follow-up. The final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow).
 

@@ -4,9 +4,9 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.5.0"
-  sdk_cli_min: "0.67.4"
-  sdk_cli_validated: "0.67.5"
+  version: "1.6.0"
+  sdk_cli_min: "0.0.0-TODO-COSUB-1023"  # PLACEHOLDER — set to first @zapier/zapier-sdk-cli with --manual (COSUB-1023 / MR 483); fill before merge
+  sdk_cli_validated: "0.0.0-TODO-COSUB-1023"  # PLACEHOLDER — see sdk_cli_min
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -406,7 +406,7 @@ Capture the returned workflow ID. Then decide how to ship the code:
     --json
   ```
 
-  Pass the same `--dependencies`, `--zapier-durable-version`, `--connections`, `--app-versions`, and `--trigger` values Phase 6 would have passed to the publish. Then hand the user the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response; the final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow) — to review and publish, or publish on their go-ahead with `publish-workflow-draft <workflow-id> <draft-id> --enabled --json`. Publishing consumes the draft. Skip Phase 7's version read-backs if nothing was published.
+  Pass the same `--dependencies`, `--zapier-durable-version`, `--connections`, `--app-versions`, and — for a `Start mode: trigger` workflow — `--trigger` values Phase 6 would have passed to the publish. Then hand the user the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response; the final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow) — to review and publish, or publish on their go-ahead. Carry the start-mode decision to the draft publish exactly as a direct publish would: a `Start mode: manual` workflow publishes with `--manual` (`publish-workflow-draft <workflow-id> <draft-id> --manual --enabled --json`); a `Start mode: trigger` workflow's draft already holds its `--trigger`, so publish without `--manual` (`publish-workflow-draft <workflow-id> <draft-id> --enabled --json`). Never pass `--trigger` and `--manual` together. Publishing consumes the draft. Skip Phase 7's version read-backs if nothing was published.
 
 For a direct publish, the current SDK CLI expects `source_files` as a JSON object, not a path to `workflow.ts`.
 
@@ -444,9 +444,9 @@ A "Webhooks by Zapier" or other catch-hook trigger is a real trigger — publish
 
 How you publish follows directly from the **start mode** confirmed in Phase 3 — the two are not co-equal defaults; you commit to the one the user chose.
 
-**Before publishing, confirm the payload matches the declared start mode:** `Start mode: trigger` means the publish passes `--trigger`; `Start mode: manual` means it omits `--trigger`. These must agree — the workflow you publish must actually carry the trigger you decided on, or deliberately carry none. Catch any disagreement here, before the publish call, so a dropped or missing trigger is not discovered only in Phase 7.
+**Before publishing, confirm the payload matches the declared start mode:** `Start mode: trigger` → the publish passes `--trigger` and **not** `--manual`; `Start mode: manual` → it passes `--manual` and **not** `--trigger`. Pass **exactly one** — the platform contract is a discriminated union (a version is either triggered or `manual: true`, never both) and rejects passing both together as a contradiction; the CLI also guards the both-case client-side. The workflow you publish must carry the trigger you decided on, or be explicitly marked manual. Catch any disagreement here, before the publish call, so a dropped or missing trigger is not discovered only in Phase 7.
 
-**`Start mode: trigger`** — publish with `--trigger`, using the config built above:
+**`Start mode: trigger`** — publish with `--trigger`, using the config built above. The trigger is the signal; do **not** also pass `--manual` (that is the contradiction the gate rejects):
 
 ```bash
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
@@ -461,7 +461,7 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --json
 ```
 
-**`Start mode: manual`** — and only when Phase 3 confirmed manual — omit `--trigger`. Omitting it is the manual branch, not a fallback for when a trigger was hard to configure: if the user asked for a trigger, a failure to build its config is a blocker to resolve, never a reason to drop to manual.
+**`Start mode: manual`** — and only when Phase 3 confirmed manual — omit `--trigger` and pass `--manual` to declare the on-demand start mode explicitly. Marking manual is the deliberate branch, not a fallback for when a trigger was hard to configure: if the user asked for a trigger, a failure to build its config is a blocker to resolve, never a reason to drop to manual.
 
 ```bash
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
@@ -469,9 +469,12 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --zapier-durable-version '<pinned durable version>' \
   --connections '<publish connection bindings JSON>' \
   --app-versions '<app versions JSON if needed>' \
+  --manual \
   --enabled \
   --json
 ```
+
+`--manual` and `--trigger` are mutually exclusive: pass `--manual` here **because** there is no trigger. Never pass both in one publish.
 
 Do not use the old `--trigger-app`, `--trigger-action`, `--trigger-auth`, or `--trigger-params` flags. The current trigger publish path is the single JSON `--trigger` object.
 
