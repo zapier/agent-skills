@@ -5,8 +5,8 @@ license: MIT
 metadata:
   author: zapier
   version: "1.6.0"
-  sdk_cli_min: "0.0.0-TODO-COSUB-1023"  # PLACEHOLDER — set to first @zapier/zapier-sdk-cli with --manual (COSUB-1023 / MR 483); fill before merge
-  sdk_cli_validated: "0.0.0-TODO-COSUB-1023"  # PLACEHOLDER — see sdk_cli_min
+  sdk_cli_min: "0.72.0"  # first @zapier/zapier-sdk-cli with --manual (COSUB-1023)
+  sdk_cli_validated: "0.72.0"
   refresh_source: "zapier/agent-skills"
 ---
 

@@ -5,8 +5,8 @@ license: MIT
 metadata:
   author: zapier
   version: "1.4.0"
-  sdk_cli_min: "0.0.0-TODO-COSUB-1023"  # PLACEHOLDER — set to first @zapier/zapier-sdk-cli with --manual (COSUB-1023 / MR 483); fill before merge
-  sdk_cli_validated: "0.0.0-TODO-COSUB-1023"  # PLACEHOLDER — see sdk_cli_min
+  sdk_cli_min: "0.72.0"  # first @zapier/zapier-sdk-cli with --manual (COSUB-1023)
+  sdk_cli_validated: "0.72.0"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -45,9 +45,7 @@ This freshness check is independent of the SDK command-surface compatibility che
 
 Check the workflow skill bundle as one unit. Do not maintain separate compatibility checks for `workflows-install`, `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`; users will normally use these skills together, and drift in any core workflow SDK surface should refresh the whole bundle.
 
-Current workflow skills carry a **placeholder** compat gate (`sdk_cli_min` / `sdk_cli_validated` = `0.0.0-TODO-COSUB-1023`) unless the installed skills' metadata says otherwise.
-
-> **NOTE (COSUB-1024, pending):** `workflows-create` and `workflows-modify` now pass `--manual` at publish, which requires the `@zapier/zapier-sdk-cli` version that adds the `--manual` flag (COSUB-1023 / MR 483). Until that version is published, the gate is a placeholder (`0.0.0-TODO-COSUB-1023`) that sorts below any installed CLI, so it is **inert** — it neither blocks nor validates. Replace it with the real first-supported version once the CLI releases; the gate only becomes meaningful then.
+`workflows-create` and `workflows-modify` pass `--manual` at publish, which needs the `@zapier/zapier-sdk-cli` version that adds the flag — so those skills (and `workflows-doctor`) gate on `sdk_cli_min` / `sdk_cli_validated` = `0.72.0`, the first CLI that ships `--manual` (COSUB-1023). A CLI older than that is flagged for upgrade.
 
 ## Step 2: Check SDK CLI Versions
 
