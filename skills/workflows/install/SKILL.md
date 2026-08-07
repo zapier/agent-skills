@@ -4,9 +4,9 @@ description: Install the Zapier SDK CLI for Zapier Workflows Early Access and bo
 license: MIT
 metadata:
   author: zapier
-  version: "1.2.0"
-  sdk_cli_min: "0.67.4"
-  sdk_cli_validated: "0.67.5"
+  version: "1.2.1"
+  sdk_cli_min: "0.74.0"
+  sdk_cli_validated: "0.74.0"
   refresh_source: "zapier/agent-skills"
 ---
 

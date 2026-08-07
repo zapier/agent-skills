@@ -5,8 +5,8 @@ license: MIT
 metadata:
   author: zapier
   version: "1.6.0"
-  sdk_cli_min: "0.72.0"  # first @zapier/zapier-sdk-cli with --manual (COSUB-1023)
-  sdk_cli_validated: "0.72.0"
+  sdk_cli_min: "0.74.0"  # first @zapier/zapier-sdk-cli with publish-workflow-draft --manual (COSUB-1076)
+  sdk_cli_validated: "0.74.0"
   refresh_source: "zapier/agent-skills"
 ---
 
