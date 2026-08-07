@@ -163,6 +163,10 @@ SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}
 
 ### Step 6A: Direct Publish
 
+Publish the variant matching the start mode from Step 3. Pass **exactly one** of `--trigger` / `--manual`.
+
+**`trigger`-mode** — carry the trigger, omit `--manual`:
+
 ```bash
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
   --dependencies '<deps from fetched version>' \
@@ -170,6 +174,18 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --connections '<connection bindings from fetched version>' \
   --app-versions '<app version bindings from fetched version>' \
   --trigger '<trigger config from fetched version>' \
+  --json
+```
+
+**`manual`-mode** — omit `--trigger`, declare `--manual`:
+
+```bash
+zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
+  --dependencies '<deps from fetched version>' \
+  --zapier-durable-version '<durable version from fetched version>' \
+  --connections '<connection bindings from fetched version>' \
+  --app-versions '<app version bindings from fetched version>' \
+  --manual \
   --json
 ```
 
@@ -214,11 +230,22 @@ Omitted fields keep their stored draft values, so only pass `--trigger`, `--conn
 
 **If the user chose to publish later,** stop here: report the draft ID and the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response — so they can review and publish from the editor, or ask you to publish in a follow-up. The final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow).
 
-**Otherwise publish now.** The update response returns the new `draft_revision`; publish with it:
+**Otherwise publish now.** The update response returns the new `draft_revision`; publish the variant matching the start mode (the draft already holds the trigger — the difference is only whether you pass `--manual`):
+
+**`trigger`-mode** — the stored trigger is the signal, omit `--manual`:
 
 ```bash
 zapier-sdk --experimental publish-workflow-draft <workflow-id> <draft-id> \
   --draft-revision <draft_revision from the update response> \
+  --json
+```
+
+**`manual`-mode** — the draft holds no trigger, declare `--manual`:
+
+```bash
+zapier-sdk --experimental publish-workflow-draft <workflow-id> <draft-id> \
+  --draft-revision <draft_revision from the update response> \
+  --manual \
   --json
 ```
 
