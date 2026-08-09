@@ -4,9 +4,9 @@ description: Modify and republish an existing durable workflow using the Zapier 
 license: MIT
 metadata:
   author: zapier
-  version: "2.0.0"
-  sdk_cli_min: "0.67.4"
-  sdk_cli_validated: "0.67.5"
+  version: "2.2.0"
+  sdk_cli_min: "0.74.0"  # first @zapier/zapier-sdk-cli with publish-workflow-draft --manual (COSUB-1076)
+  sdk_cli_validated: "0.74.0"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -73,6 +73,15 @@ On either path, also fetch the workflow itself for its name, enabled state, and 
 ```bash
 zapier-sdk --experimental get-workflow <workflow-id> --json
 ```
+
+**Determine the current start mode from this read-back — a modify must never silently change it.** A workflow has one of two start modes, and re-publishing without carrying it forward is exactly how a triggered workflow silently becomes triggerless:
+
+- **`trigger`** — **either** signal shows a trigger: the fetched version/draft source carries a `trigger` object, **or** `get-workflow`'s `triggers[]` is non-empty. Capture the full `trigger` config verbatim; it must be re-passed on publish (Step 6) or the new version drops the trigger.
+- **`manual`** — **both** signals are absent: no `trigger` object in the fetched source **and** an empty `triggers[]`. It runs on-demand only.
+
+If the two signals disagree — most importantly a saved `trigger` config but an empty or stale live `triggers[]` (a claim that failed, is pending, or was disabled) — do **not** label it manual. Preserve the trigger and stop to reconcile with the user: dropping a saved trigger is the silent-triggerless regression this determination guards against.
+
+`triggers[]` and the fetched trigger config are the authority for the current mode — the platform's start-mode input (the write-only `manual` flag) is never surfaced on any read-back, so do not look for it. Unless the user's request is explicitly to change the start mode (add a trigger to a manual workflow, or remove one), the modify preserves it — carry the captured mode through the edit, publish, and verification.
 
 The remaining checks in this step apply only when building on a **pre-existing** draft (skip them for the direct path or a draft you just created — a fresh fork is identical to its base):
 
@@ -141,7 +150,8 @@ Before writing anything, summarize for the user:
 2. The code or config change.
 3. The workflow ID (and draft, on the draft path) being updated.
 4. The values being preserved, including dependencies, durable version, enabled state, connections, app versions, and trigger configuration.
-5. The publish path chosen in Step 2, and — on the draft path — **any unpublished draft changes found in Step 3** (publishing the draft ships those too; see 6B).
+5. The **start mode** captured in Step 3 (`trigger` or `manual`) and that it is unchanged by this edit — or, if the request is to change it, state the change explicitly (adding a trigger to a manual workflow, or removing one). A modify never changes the start mode as a side effect.
+6. The publish path chosen in Step 2, and — on the draft path — **any unpublished draft changes found in Step 3** (publishing the draft ships those too; see 6B).
 
 Wait for explicit confirmation, then build `source_files`:
 
@@ -149,7 +159,13 @@ Wait for explicit confirmation, then build `source_files`:
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
 ```
 
+**Before publishing on either path, confirm the version you are about to publish matches the start mode captured in Step 3:** a `trigger`-mode workflow's published version must carry its trigger and be published **without** `--manual`; a `manual`-mode workflow's must carry no trigger and be published **with** `--manual` (unless the request is explicitly to change the mode, in which case match the intended new mode). Pass **exactly one** of trigger / `--manual` — the platform contract is a discriminated union and rejects both together as a contradiction. A `trigger`-mode republish that loses its trigger is a silent-triggerless regression. *How* you pass this differs by path — the trigger is a `--trigger` flag on a direct publish but lives in the stored draft on the draft path — so see the path-specific check in 6A and 6B below.
+
 ### Step 6A: Direct Publish
+
+Publish the variant matching the start mode from Step 3. Pass **exactly one** of `--trigger` / `--manual`.
+
+**`trigger`-mode** — carry the trigger, omit `--manual`:
 
 ```bash
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
@@ -161,9 +177,23 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --json
 ```
 
+**`manual`-mode** — omit `--trigger`, declare `--manual`:
+
+```bash
+zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
+  --dependencies '<deps from fetched version>' \
+  --zapier-durable-version '<durable version from fetched version>' \
+  --connections '<connection bindings from fetched version>' \
+  --app-versions '<app version bindings from fetched version>' \
+  --manual \
+  --json
+```
+
 Use the fetched workflow's enabled state when publishing. If the workflow was enabled before the edit, either omit `--enabled` or pass bare `--enabled` because publish defaults to enabled. If the workflow was disabled before the edit, add `--enabled false`; do not use `--enabled=false` or `--no-enabled`. Do not accidentally re-enable a disabled workflow.
 
 Omit `--connections`, `--app-versions`, or `--trigger` only when the fetched metadata confirms the workflow version does not use that field. If the fetched metadata includes trigger, connection, or app-version configuration but the shape cannot be mapped to the current publish flags, stop before publishing and tell the user the workflow needs SDK confirmation rather than silently dropping metadata.
+
+**Start-mode check (direct publish):** a `trigger`-mode workflow must include `--trigger` (and **not** `--manual`) in this call — omitting `--trigger` publishes a triggerless version and silently drops the trigger. A `manual`-mode workflow must omit `--trigger` and pass `--manual` instead. Never pass both `--trigger` and `--manual`; the platform contract rejects the combination. (When the request is to change the mode, match the intended new mode instead.)
 
 **On a 409 open-draft conflict:** the server rejects direct publishes when the workflow has open draft(s) — publishing past a draft would let the draft's later publish silently revert your change. The error lists the blocking drafts (`meta.open_drafts`). A draft appearing here after Step 2 found none means someone (likely the user, in the editor) opened one mid-flight. Tell the user and offer:
 
@@ -196,13 +226,26 @@ zapier-sdk --experimental update-workflow-draft <workflow-id> <draft-id> "$SOURC
 
 Omitted fields keep their stored draft values, so only pass `--trigger`, `--connections`, `--app-versions`, `--dependencies`, or `--zapier-durable-version` when the edit changes them. Passing `null` for `--trigger`, `--connections`, or `--app-versions` clears the stored value — never do that to "skip" a field.
 
+**Start-mode check (draft path):** the trigger lives in the stored draft and `publish-workflow-draft` takes no `--trigger` flag — it publishes whatever the draft holds. So a correct `trigger`-mode draft publish has *no* `--trigger` at publish time; that is expected, not a dropped trigger. First confirm, immediately before `publish-workflow-draft`, that the draft's stored `trigger` still matches the captured (or intended) start mode — a `trigger`-mode draft still carries its trigger, a `manual`-mode draft none (read it back with `get-workflow-draft` if unsure). Then declare the start mode at publish: a `manual`-mode workflow passes `--manual` on `publish-workflow-draft` (below); a `trigger`-mode workflow's draft already holds its trigger, so publish **without** `--manual`. Never combine a stored trigger with `--manual` — the platform contract rejects both together. Clearing the trigger with `--trigger null` on the `update-workflow-draft` above is exactly how a `trigger`-mode workflow silently becomes manual.
+
 **If the user chose to publish later,** stop here: report the draft ID and the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response — so they can review and publish from the editor, or ask you to publish in a follow-up. The final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow).
 
-**Otherwise publish now.** The update response returns the new `draft_revision`; publish with it:
+**Otherwise publish now.** The update response returns the new `draft_revision`; publish the variant matching the start mode (the draft already holds the trigger — the difference is only whether you pass `--manual`):
+
+**`trigger`-mode** — the stored trigger is the signal, omit `--manual`:
 
 ```bash
 zapier-sdk --experimental publish-workflow-draft <workflow-id> <draft-id> \
   --draft-revision <draft_revision from the update response> \
+  --json
+```
+
+**`manual`-mode** — the draft holds no trigger, declare `--manual`:
+
+```bash
+zapier-sdk --experimental publish-workflow-draft <workflow-id> <draft-id> \
+  --draft-revision <draft_revision from the update response> \
+  --manual \
   --json
 ```
 
@@ -221,12 +264,21 @@ zapier-sdk --experimental get-workflow <workflow-id> --json
 zapier-sdk --experimental list-workflow-versions <workflow-id> --json
 ```
 
-Confirm the newest version reflects the publish, the workflow is still enabled if it should be, and trigger/connection/app-version metadata was preserved. Check the matching entry in `triggers[]` for `details.webhook_url`, regardless of trigger type — if present, it's the catch URL external services call and is meant to be shared, unlike the workflow-level `trigger_url`; most triggers have none, and that is normal. If the change is hard to validate without a live trigger fire, tell the user exactly what test event to send and what result to expect.
+Confirm the newest version reflects the publish, the workflow is still enabled if it should be, and trigger/connection/app-version metadata was preserved.
+
+**Gate on start-mode preservation.** Compare the deployed start mode against the one captured in Step 3. The `enabled` state and the trigger's presence are independent — an `enabled` check alone will not catch a dropped trigger, so inspect `triggers[]` directly:
+
+- Captured mode **`trigger`** (and the edit was not meant to remove it) → require the read-back to still show a non-empty `triggers[]`, and `enabled` to match the workflow's **preserved** enabled state (Step 6A), not `enabled: true` unconditionally. A workflow that was disabled before the edit stays disabled and still passes this gate; only require `enabled: true` when the workflow was enabled before the edit (or the user asked to enable it). An empty `triggers[]` means the republish dropped the trigger (most often `--trigger` was not re-passed with the fetched config) — do **not** report the change as done; re-publish with the preserved `--trigger` and re-check. The `triggers[]` check, not the `enabled` state, is what proves the trigger survived: a triggered workflow can be legitimately disabled, and a disabled workflow that lost its trigger would still read back `enabled: false`.
+- Captured mode **`manual`** (and the edit was not meant to add a trigger) → require `triggers[]` to remain empty. A trigger appearing unexpectedly is also a mismatch — stop and reconcile with the user.
+- If the request was explicitly to change the start mode, verify the read-back matches the **intended new** mode instead. `triggers[]` is the authority for this comparison; the platform's write-only `manual` flag is never surfaced on a read-back, so do not look for it.
+
+Check the matching entry in `triggers[]` for `details.webhook_url`, regardless of trigger type — if present, it's the catch URL external services call and is meant to be shared, unlike the workflow-level `trigger_url`; most triggers have none, and that is normal. If the change is hard to validate without a live trigger fire, tell the user exactly what test event to send and what result to expect.
 
 Finish by reporting:
 
 - Workflow name and ID.
 - Whether the requested change was published, or saved to a draft for later publishing (include the draft ID).
+- The start mode (`trigger` or `manual`) and that it was preserved (or, if the change was to alter it, its new value), confirmed by the Step 7 gate.
 - Whether trigger, connection, and app-version metadata were preserved.
 - Whether the workflow is enabled.
 - The trigger's `webhook_url`, if present.

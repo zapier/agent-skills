@@ -4,9 +4,9 @@ description: Diagnose Zapier Workflows skill and SDK CLI compatibility. Use when
 license: MIT
 metadata:
   author: zapier
-  version: "1.3.0"
-  sdk_cli_min: "0.67.4"
-  sdk_cli_validated: "0.67.5"
+  version: "1.4.0"
+  sdk_cli_min: "0.74.0"  # first @zapier/zapier-sdk-cli with publish-workflow-draft --manual (COSUB-1076)
+  sdk_cli_validated: "0.74.0"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -45,7 +45,7 @@ This freshness check is independent of the SDK command-surface compatibility che
 
 Check the workflow skill bundle as one unit. Do not maintain separate compatibility checks for `workflows-install`, `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`; users will normally use these skills together, and drift in any core workflow SDK surface should refresh the whole bundle.
 
-Current workflow skills use `sdk_cli_min: "0.67.4"` and `sdk_cli_validated: "0.67.5"` unless the installed skills' metadata says otherwise.
+`workflows-create` and `workflows-modify` pass `--manual` at publish on both publish paths (`publish-workflow-version --manual` and `publish-workflow-draft --manual`), which needs the `@zapier/zapier-sdk-cli` version that adds the draft-path flag — so those skills (and `workflows-doctor`) gate on `sdk_cli_min` / `sdk_cli_validated` = `0.74.0`, the first CLI that ships `publish-workflow-draft --manual` (COSUB-1076). `publish-workflow-version --manual` shipped earlier, in 0.72.0 (COSUB-1023), but the bundle pins to the newest flag it depends on. A CLI older than that is flagged for upgrade.
 
 ## Step 2: Check SDK CLI Versions
 
@@ -89,12 +89,12 @@ zapier-sdk --experimental <candidate-command> --help
 Confirm that the SDK CLI exposes a clear way to perform these operations for the workflow skill bundle:
 
 - Create a workflow container.
-- Publish a workflow version.
+- Publish a workflow version, declaring its start mode (`--trigger`, or `--manual` for on-demand).
 - List a workflow's open drafts.
 - Create (fork) a workflow draft.
 - Read a workflow draft.
 - Update a workflow draft, with optimistic concurrency via a draft revision.
-- Publish a workflow draft, with optimistic concurrency and enabled-state control.
+- Publish a workflow draft, with optimistic concurrency and enabled-state control, declaring its start mode (a stored trigger, or `--manual` for on-demand).
 - Discard a workflow draft.
 - Run a durable workflow locally or synthetically.
 - List workflows.
@@ -139,9 +139,9 @@ zapier-sdk --experimental discard-workflow-draft --help
 Example flags from the validated SDK CLI surface:
 
 - `create-workflow`: `--private`
-- `publish-workflow-version`: `--connections`, `--app-versions`, `--trigger`, `--enabled`
+- `publish-workflow-version`: `--connections`, `--app-versions`, `--trigger`, `--manual`, `--enabled`
 - `update-workflow-draft`: `--draft-revision`, `--connections`, `--app-versions`, `--trigger`
-- `publish-workflow-draft`: `--draft-revision`, `--enabled`
+- `publish-workflow-draft`: `--draft-revision`, `--manual`, `--enabled`
 - `run-durable`: `--connections`, `--input`, `--private`
 - `trigger-workflow`: `--input`
 

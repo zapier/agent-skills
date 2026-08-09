@@ -4,9 +4,9 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.4.0"
-  sdk_cli_min: "0.67.4"
-  sdk_cli_validated: "0.67.5"
+  version: "1.6.0"
+  sdk_cli_min: "0.74.0"  # first @zapier/zapier-sdk-cli with publish-workflow-draft --manual (COSUB-1076)
+  sdk_cli_validated: "0.74.0"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -80,10 +80,30 @@ Read the user's natural language request and extract:
 4. Manual input fields or trigger input fields.
 5. Conditional logic.
 6. Waits, callbacks, or human approval gates.
+7. **Start mode** (required — see below).
 
 Summarize the proposed workflow back to the user before discovery. Ask focused clarifying questions for missing details like target channels, folders, recipients, or whether to stop when a search returns no results.
 
 Do not generate code until the user agrees on the workflow shape.
+
+### Classify The Start Mode (Required)
+
+Every workflow has exactly one **start mode**, and you must decide it here — it is a required output of this phase, not something inferred later from whether a trigger happened to get configured. There are two:
+
+- **`trigger`** — the workflow starts on its own, either on a schedule (scheduled) or in response to an external event (event-driven). It is published with `--trigger` and runs without anyone invoking it.
+- **`manual`** — the workflow has no trigger and runs only on-demand via `trigger-workflow`. This is a deliberate choice, not the absence of a trigger.
+
+Default to looking for a trigger in the build instruction. Infer from intent cues:
+
+- Recurring or time words ("every morning", "daily", "each hour", "on a schedule") → `trigger`, scheduled.
+- "when X happens in `<app>`" / "whenever a new `<record>` is created" → `trigger`, event-driven.
+- Explicit "manually", "on demand", "when I run it", or a workflow clearly meant to be invoked by hand with input → `manual`.
+
+**If the start mode is ambiguous — no clear trigger cue and no explicit manual cue — ask the user: run it manually on-demand, or attach a trigger (and which)? Never silently assume `manual` just because no trigger was named.** A triggerless workflow published on an unconfirmed assumption is the exact failure this classification exists to prevent.
+
+This decision is **required even though the platform treats its start-mode input as optional** — the write-only `manual` flag sent at publish is not a required field, and enforcement is per-account and flag-gated, so the optionality is a staged-rollout artifact, not permission to skip the decision. Never publish without a start mode the user, or an unambiguous build instruction, chose.
+
+Carry the chosen start mode forward: it is confirmed in the Phase 3 build plan, drives the publish in Phase 6, and is the gate for the Phase 7 verification.
 
 ## Phase 2: Discover Apps, Connections, Actions, Triggers, And Fields
 
@@ -179,15 +199,18 @@ Workflow: <kebab-case-name>
 Input: { field1, field2 }
 Connections:
   alias = connectionId (connection title)
-Trigger:
-  selected_api.action with params (including "Webhooks by Zapier" or other catch-hook apps), or none for a workflow fired only manually via `trigger-workflow`
+Start mode: trigger (<selected_api.action with params, including "Webhooks by Zapier" or other catch-hook apps>)
+  — or —
+Start mode: manual — on-demand only via `trigger-workflow`
 Steps:
   1. <step-name> - <AppName>.<actionType>.<actionKey>
   2. <step-name> - <AppName>.<actionType>.<actionKey>
 Return: <summary of output>
 ```
 
-Ask the user to confirm before generating files.
+The **Start mode** line is required and must state exactly one of the two modes classified in Phase 1. `manual` is a deliberate, user-confirmed selection — never render it as "no trigger" or leave it implied by an absent trigger. If the mode is still ambiguous at this point, resolve it with the user before proceeding (Phase 1).
+
+Ask the user to confirm before generating files, including explicit confirmation of the start mode.
 
 ## Phase 4: Generate The Workflow Project
 
@@ -383,7 +406,7 @@ Capture the returned workflow ID. Then decide how to ship the code:
     --json
   ```
 
-  Pass the same `--dependencies`, `--zapier-durable-version`, `--connections`, `--app-versions`, and `--trigger` values Phase 6 would have passed to the publish. Then hand the user the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response; the final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow) — to review and publish, or publish on their go-ahead with `publish-workflow-draft <workflow-id> <draft-id> --enabled --json`. Publishing consumes the draft. Skip Phase 7's version read-backs if nothing was published.
+  Pass the same `--dependencies`, `--zapier-durable-version`, `--connections`, `--app-versions`, and — for a `Start mode: trigger` workflow — `--trigger` values Phase 6 would have passed to the publish. Then hand the user the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response; the final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow) — to review and publish, or publish on their go-ahead. Carry the start-mode decision to the draft publish exactly as a direct publish would: a `Start mode: manual` workflow publishes with `--manual` (`publish-workflow-draft <workflow-id> <draft-id> --manual --enabled --json`); a `Start mode: trigger` workflow's draft already holds its `--trigger`, so publish without `--manual` (`publish-workflow-draft <workflow-id> <draft-id> --enabled --json`). Never pass `--trigger` and `--manual` together. Publishing consumes the draft. Skip Phase 7's version read-backs if nothing was published.
 
 For a direct publish, the current SDK CLI expects `source_files` as a JSON object, not a path to `workflow.ts`.
 
@@ -419,7 +442,11 @@ For trigger-backed workflows, build the `trigger` JSON from Phase 2. Keep `selec
 
 A "Webhooks by Zapier" or other catch-hook trigger is a real trigger — publish it with `--trigger` using the config captured in Phase 2, the same as any other app trigger.
 
-Publish a workflow with no trigger at all — invoked only manually via `trigger-workflow` — by omitting `--trigger`:
+How you publish follows directly from the **start mode** confirmed in Phase 3 — the two are not co-equal defaults; you commit to the one the user chose.
+
+**Before publishing, confirm the payload matches the declared start mode:** `Start mode: trigger` → the publish passes `--trigger` and **not** `--manual`; `Start mode: manual` → it passes `--manual` and **not** `--trigger`. Pass **exactly one** — the platform contract is a discriminated union (a version is either triggered or `manual: true`, never both) and rejects passing both together as a contradiction; the CLI also guards the both-case client-side. The workflow you publish must carry the trigger you decided on, or be explicitly marked manual. Catch any disagreement here, before the publish call, so a dropped or missing trigger is not discovered only in Phase 7.
+
+**`Start mode: trigger`** — publish with `--trigger`, using the config built above. The trigger is the signal; do **not** also pass `--manual` (that is the contradiction the gate rejects):
 
 ```bash
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
@@ -429,11 +456,12 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --zapier-durable-version '<pinned durable version>' \
   --connections '<publish connection bindings JSON>' \
   --app-versions '<app versions JSON if needed>' \
+  --trigger '<trigger config JSON>' \
   --enabled \
   --json
 ```
 
-Publish a trigger-backed workflow by adding `--trigger`:
+**`Start mode: manual`** — and only when Phase 3 confirmed manual — omit `--trigger` and pass `--manual` to declare the on-demand start mode explicitly. Marking manual is the deliberate branch, not a fallback for when a trigger was hard to configure: if the user asked for a trigger, a failure to build its config is a blocker to resolve, never a reason to drop to manual.
 
 ```bash
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
@@ -441,10 +469,12 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
   --zapier-durable-version '<pinned durable version>' \
   --connections '<publish connection bindings JSON>' \
   --app-versions '<app versions JSON if needed>' \
-  --trigger '<trigger config JSON>' \
+  --manual \
   --enabled \
   --json
 ```
+
+`--manual` and `--trigger` are mutually exclusive: pass `--manual` here **because** there is no trigger. Never pass both in one publish.
 
 Do not use the old `--trigger-app`, `--trigger-action`, `--trigger-auth`, or `--trigger-params` flags. The current trigger publish path is the single JSON `--trigger` object.
 
@@ -460,13 +490,18 @@ zapier-sdk --experimental list-workflow-versions <workflow-id> --json
 zapier-sdk --experimental get-workflow-version <workflow-id> <version-id> --json
 ```
 
-For trigger-backed workflows, verify the trigger actually claimed. The claim is asynchronous and can fail silently, so re-read the workflow (allow a few seconds; poll if needed) and confirm it is enabled:
+### Gate On The Start Mode (Required)
+
+Verification must confirm the deployed workflow matches the **start mode confirmed in Phase 3** — not merely that it is `enabled`. A triggerless workflow reads back as `enabled: true`, so an `enabled` check alone silently passes a workflow that was supposed to have a trigger but doesn't. Re-read the workflow (the trigger claim is asynchronous and can fail silently, so allow a few seconds and poll if needed) and gate on the declared mode:
 
 ```bash
 zapier-sdk --experimental get-workflow <workflow-id> --json
 ```
 
-If `enabled` is `false` even though you published with `--enabled`, the trigger claim failed. The most common cause is a `selected_api` that is not version-pinned to the `implementation_id`, or a `params` field with the wrong shape (see Phase 2). Re-publish with a corrected `--trigger` and re-check. Do not report the workflow as deployed until `get-workflow` shows `enabled: true`.
+- **`Start mode: trigger`** → require **both** `enabled: true` **and** a non-empty `triggers[]`. An empty `triggers[]` means the trigger was dropped or `--trigger` was omitted — the claim failed or was never attempted. Do **not** report the workflow as done. The most common cause is a `selected_api` that is not version-pinned to the `implementation_id`, or a `params` field with the wrong shape (see Phase 2); `enabled: false` after publishing with `--enabled` is the same failure. Re-publish with a corrected `--trigger` and re-check.
+- **`Start mode: manual`** → require `triggers[]` to be **empty by design**, and confirm this workflow was deliberately classified manual in Phase 3 (never triggered). A manual workflow with a non-empty `triggers[]` is also a mismatch — stop and reconcile with the user. It is invoked on-demand via `trigger-workflow`; there is no trigger claim to verify.
+
+`triggers[]` is the authority for this gate. The platform's start-mode input (the write-only `manual` flag) is never surfaced on any read-back, so do not look for it on `get-workflow` or a version — read the trigger's actual presence instead.
 
 Regardless of trigger type, check the matching entry in `triggers[]` from the `get-workflow --json` read-back above for `details.webhook_url` (re-run the same command if enough time has passed since that read that the claim state could have changed). If present, it is the catch URL external services call — show it to the user plainly; unlike the workflow-level `trigger_url`, it is meant to be shared. Most triggers have no `webhook_url`, and that is normal — do not flag its absence.
 
@@ -498,7 +533,7 @@ Finish by reporting:
 - Whether testing passed.
 - Whether the deployed workflow is enabled.
 - Whether the workflow is private or account-visible.
-- Whether the workflow uses a Zapier app trigger, a catch-hook trigger (report its `webhook_url` if available), or no trigger (manual-only via `trigger-workflow`).
+- The confirmed **start mode**: `trigger` (a Zapier app trigger or a catch-hook trigger — report its `webhook_url` if available) or `manual` (on-demand only via `trigger-workflow`), and that the Phase 7 gate confirmed the deployed workflow matches it.
 - The Zapier editor link: `https://zapier.com/durables-editor/<workflow-id>`.
 
 ## Durable Patterns
