@@ -37,19 +37,20 @@ zapier-sdk --experimental trigger-workflow --help
 
 Pass `latest` for versions — the platform resolves it. The sandbox installs with `pnpm install --config.minimumReleaseAge=1440`, so a dependency published less than 24h ago is rejected, and `@zapier/zapier-sdk` publishes several times a day. You do not have to work out which release is old enough: `latest` is resolved for you to the newest release that clears that 24h gate (COSUB-956).
 
-Two different mechanisms do it, which matters only when something fails:
+That only applies to `@zapier/zapier-durable` and `@zapier/zapier-sdk`. They are resolved **server-side**, at publish and at run submit, and the exact version is stored on the workflow version or the run — so a workflow stays on the version it resolved to, however long it runs.
 
-- `@zapier/zapier-durable` and `@zapier/zapier-sdk` are resolved **server-side**, at publish and at run submit, and the exact version is stored on the workflow version or the run. So a workflow stays on the version it resolved to, however long it runs.
-- Any other package, including `zod`, is passed to the install as written, and `pnpm` falls back from the `latest` tag to the newest release older than the 24h gate itself.
-
-So:
+Give every other dependency an exact version:
 
 ```bash
 --zapier-durable-version latest
---dependencies '{"@zapier/zapier-sdk":"latest","zod":"latest"}'
+--dependencies '{"@zapier/zapier-sdk":"latest","zod":"4.3.6"}'
 ```
 
-Ranges (`^1.2.3`, `~1.2`) are still rejected with a 400 — `latest` is the only non-exact value the durable version accepts. An exact version is still fine if you have a reason to pin one; it must be at least 24h old.
+A spec that isn't resolved server-side is stored as written, and every tick regenerates `package.json` from it with no lockfile. So `"zod":"latest"` would install whatever is newest at each tick, and a run that spans a `zod` major would replay against a different library than it recorded. The install itself would succeed — `pnpm` falls back from the `latest` tag to the newest release outside the 24h gate — which is what makes this worth stating: the failure shows up later, as a replay that doesn't match.
+
+When publishing a workflow version you can omit `zod` entirely and the service injects a pinned version for you. `run-durable` injects nothing, so declare there whatever the source imports.
+
+Ranges (`^1.2.3`, `~1.2`) are rejected with a 400 — `latest` is the only non-exact value the durable version accepts. An exact version is always fine; it must be at least 24h old.
 
 **Every package the generated `workflow.ts` imports must still appear in `--dependencies`** — the sandbox installs from `--dependencies`, not your local `package.json`, so a missing import (such as `zod`) fails the run with `Cannot find package`.
 
@@ -217,7 +218,7 @@ Create a workflow directory:
   "dependencies": {
     "@zapier/zapier-sdk": "latest",
     "@zapier/zapier-durable": "latest",
-    "zod": "latest"
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "typescript": "latest"
@@ -348,7 +349,7 @@ Run the durable:
 
 ```bash
 zapier-sdk --experimental run-durable "$SOURCE_FILES" \
-  --dependencies '{"@zapier/zapier-sdk":"latest","zod":"latest"}' \
+  --dependencies '{"@zapier/zapier-sdk":"latest","zod":"4.3.6"}' \
   --zapier-durable-version latest \
   --connections '<connections JSON>' \
   --input '<JSON matching input schema>' \
@@ -438,7 +439,7 @@ How you publish follows directly from the **start mode** confirmed in Phase 3 �
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
 
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
-  --dependencies '{"@zapier/zapier-sdk":"latest","zod":"latest"}' \
+  --dependencies '{"@zapier/zapier-sdk":"latest","zod":"4.3.6"}' \
   --zapier-durable-version latest \
   --connections '<publish connection bindings JSON>' \
   --app-versions '<app versions JSON if needed>' \
@@ -451,7 +452,7 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
 
 ```bash
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
-  --dependencies '{"@zapier/zapier-sdk":"latest","zod":"latest"}' \
+  --dependencies '{"@zapier/zapier-sdk":"latest","zod":"4.3.6"}' \
   --zapier-durable-version latest \
   --connections '<publish connection bindings JSON>' \
   --app-versions '<app versions JSON if needed>' \
