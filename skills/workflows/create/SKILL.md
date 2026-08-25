@@ -50,7 +50,7 @@ A spec that isn't resolved server-side is stored as written, and every tick rege
 
 When publishing a workflow version you can omit `zod` entirely and the service injects a pinned version for you. `run-durable` injects nothing, so declare there whatever the source imports.
 
-Ranges (`^1.2.3`, `~1.2`) are rejected with a 400 — `latest` is the only non-exact value the durable version accepts. An exact version is always fine; it must be at least 24h old.
+Ranges (`^1.2.3`, `~1.2`) are rejected with a 400 for the durable runtime version — whether you pass it as `--zapier-durable-version` or as the `@zapier/zapier-durable` entry in `--dependencies`. So `latest` is the only non-exact value it takes. Every other dependency does accept a range and stores it as written; pin those exactly anyway, for the reason above. An exact version is always fine; it must be at least 24h old.
 
 **Every package the generated `workflow.ts` imports must still appear in `--dependencies`** — the sandbox installs from `--dependencies`, not your local `package.json`, so a missing import (such as `zod`) fails the run with `Cannot find package`.
 
