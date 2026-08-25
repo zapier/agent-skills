@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.6.0"
+  version: "1.7.0"
   sdk_cli_min: "0.74.0"  # first @zapier/zapier-sdk-cli with publish-workflow-draft --manual (COSUB-1076)
   sdk_cli_validated: "0.74.0"
   refresh_source: "zapier/agent-skills"
@@ -35,38 +35,24 @@ zapier-sdk --experimental list-triggers --help
 zapier-sdk --experimental trigger-workflow --help
 ```
 
-Pin **aged** versions, not npm-latest. The Vercel sandbox installs dependencies with `pnpm install --config.minimumReleaseAge=1440`, so any direct dependency published less than 24h ago is rejected. `@zapier/zapier-sdk` publishes often (several times a day), so its npm-latest is regularly younger than 24h. `@zapier/zapier-sdk`, `@zapier/zapier-durable`, and `zod` (imported by the generated `workflow.ts`) are all direct dependencies of the sandbox install, so select the latest version of each **published at least 24h ago**. This needs only Node (already required) — no `jq` or other tooling:
+Pass `latest` for versions — the platform resolves it. The sandbox installs with `pnpm install --config.minimumReleaseAge=1440`, so a dependency published less than 24h ago is rejected, and `@zapier/zapier-sdk` publishes several times a day. You do not have to work out which release is old enough: `latest` is resolved for you to the newest release that clears that 24h gate (COSUB-956).
+
+That only applies to `@zapier/zapier-durable` and `@zapier/zapier-sdk`. They are resolved **server-side**, at publish and at run submit, and the exact version is stored on the workflow version or the run — so a workflow stays on the version it resolved to, however long it runs.
+
+Give every other dependency an exact version:
 
 ```bash
-SELECT_AGED_VERSION='
-const cp = require("child_process");
-const pkg = process.argv[1];
-const times = JSON.parse(cp.execSync("npm view " + pkg + " time --json", { encoding: "utf8" }));
-const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-const eligible = Object.keys(times)
-  .filter((v) => /^[0-9]+\.[0-9]+\.[0-9]+$/.test(v))
-  .map((v) => ({ v, t: new Date(times[v]).getTime() }))
-  .filter((x) => x.t <= cutoff)
-  .sort((a, b) => a.t - b.t);
-if (!eligible.length) {
-  console.error("No " + pkg + " stable version published >=24h ago");
-  process.exit(1);
-}
-console.log(eligible[eligible.length - 1].v);
-'
-SDK_VERSION="$(node -e "$SELECT_AGED_VERSION" @zapier/zapier-sdk)"
-DURABLE_VERSION="$(node -e "$SELECT_AGED_VERSION" @zapier/zapier-durable)"
-ZOD_VERSION="$(node -e "$SELECT_AGED_VERSION" zod)"
-echo "SDK_VERSION=$SDK_VERSION  DURABLE_VERSION=$DURABLE_VERSION  ZOD_VERSION=$ZOD_VERSION"
+--zapier-durable-version latest
+--dependencies '{"@zapier/zapier-sdk":"latest","zod":"4.3.6"}'
 ```
 
-Capture:
+A spec that isn't resolved server-side is stored as written, and every tick regenerates `package.json` from it with no lockfile. So `"zod":"latest"` would install whatever is newest at each tick, and a run that spans a `zod` major would replay against a different library than it recorded. The install itself would succeed — `pnpm` falls back from the `latest` tag to the newest release outside the 24h gate — which is what makes this worth stating: the failure shows up later, as a replay that doesn't match.
 
-- `SDK_VERSION` — the latest `@zapier/zapier-sdk` published at least 24h ago. Use it as the pinned SDK dependency.
-- `DURABLE_VERSION` — the latest `@zapier/zapier-durable` published at least 24h ago. Use it for the local `package.json` pin and for `--zapier-durable-version`.
-- `ZOD_VERSION` — the latest `zod` published at least 24h ago. Use it for the local `package.json` pin and in `--dependencies`, because the generated `workflow.ts` imports `zod`.
+When publishing a workflow version you can omit `zod` entirely and the service injects a pinned version for you. `run-durable` injects nothing, so declare there whatever the source imports.
 
-Use exact versions in commands. Do not pass `latest`. Pass the aged `SDK_VERSION` and `ZOD_VERSION` to `--dependencies` and the aged `DURABLE_VERSION` to `--zapier-durable-version` (see Phases 5 and 6) — all are subject to the 24h guard. **Every package the generated `workflow.ts` imports must appear in `--dependencies`**, aged-pinned: the sandbox installs from `--dependencies`, not your local `package.json`, so a missing import (such as `zod`) fails the run with `Cannot find package`.
+Ranges (`^1.2.3`, `~1.2`) are rejected with a 400 for the durable runtime version — whether you pass it as `--zapier-durable-version` or as the `@zapier/zapier-durable` entry in `--dependencies`. So `latest` is the only non-exact value it takes. Every other dependency does accept a range and stores it as written; pin those exactly anyway, for the reason above. An exact version is always fine; it must be at least 24h old.
+
+**Every package the generated `workflow.ts` imports must still appear in `--dependencies`** — the sandbox installs from `--dependencies`, not your local `package.json`, so a missing import (such as `zod`) fails the run with `Cannot find package`.
 
 The user must also have app connections configured at https://zapier.com/app/assets/connections for any app actions the workflow will run.
 
@@ -223,15 +209,16 @@ Create a workflow directory:
     workflow.ts
 ```
 
-`package.json` should include exact dependencies:
+`package.json` is for local type-checking only — the sandbox installs from
+`--dependencies`, not from this file — so `latest` is fine here too:
 
 ```json
 {
   "type": "module",
   "dependencies": {
-    "@zapier/zapier-sdk": "<pinned SDK version>",
-    "@zapier/zapier-durable": "<pinned durable version>",
-    "zod": "<pinned zod version>"
+    "@zapier/zapier-sdk": "latest",
+    "@zapier/zapier-durable": "latest",
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "typescript": "latest"
@@ -362,8 +349,8 @@ Run the durable:
 
 ```bash
 zapier-sdk --experimental run-durable "$SOURCE_FILES" \
-  --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
-  --zapier-durable-version '<pinned durable version>' \
+  --dependencies '{"@zapier/zapier-sdk":"latest","zod":"4.3.6"}' \
+  --zapier-durable-version latest \
   --connections '<connections JSON>' \
   --input '<JSON matching input schema>' \
   --private
@@ -452,8 +439,8 @@ How you publish follows directly from the **start mode** confirmed in Phase 3 �
 SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
 
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
-  --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
-  --zapier-durable-version '<pinned durable version>' \
+  --dependencies '{"@zapier/zapier-sdk":"latest","zod":"4.3.6"}' \
+  --zapier-durable-version latest \
   --connections '<publish connection bindings JSON>' \
   --app-versions '<app versions JSON if needed>' \
   --trigger '<trigger config JSON>' \
@@ -465,8 +452,8 @@ zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES"
 
 ```bash
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
-  --dependencies '{"@zapier/zapier-sdk":"<pinned SDK version>","zod":"<pinned zod version>"}' \
-  --zapier-durable-version '<pinned durable version>' \
+  --dependencies '{"@zapier/zapier-sdk":"latest","zod":"4.3.6"}' \
+  --zapier-durable-version latest \
   --connections '<publish connection bindings JSON>' \
   --app-versions '<app versions JSON if needed>' \
   --manual \
