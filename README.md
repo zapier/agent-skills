@@ -17,6 +17,15 @@ skills/
 
 See [AGENTS.md](AGENTS.md) for the authoring contract (naming, frontmatter, scripts).
 
+### Generated workflow bundle
+
+The six existing workflow skills (`create`, `modify`, `history`, `list`,
+`install`, and `doctor`) are generated from the shared source at
+[`gitlab.com/zapier/skills`](https://gitlab.com/zapier/skills). Contribute
+changes to those skills upstream rather than editing their
+`skills/workflows/<name>` directories here. Generated pull requests update the
+six managed directories and `.shared-skills-source.json` together.
+
 ## Categories
 
 Skills are grouped by team or project. Each category's README lists its skills; the full, always-current index of every skill is on [skills.sh](https://skills.sh/zapier/agent-skills).

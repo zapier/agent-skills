@@ -1,0 +1,31 @@
+name: Managed workflow skills
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  managed-skills:
+    name: Check managed workflow skills
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check managed paths
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: >-
+          node .github/scripts/check-managed-skills.mjs
+          --base "$BASE_SHA"
+          --head "$HEAD_SHA"
+          --branch "$HEAD_BRANCH"
+
+      - name: Test managed-path guard
+        run: node --test .github/scripts/check-managed-skills.test.mjs
