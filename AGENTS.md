@@ -6,6 +6,25 @@ This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, e
 
 A collection of skills for AI coding agents, maintained by Zapier teams. Skills are packaged instructions and scripts that extend an agent's capabilities. Skills are indexed by [skills.sh](https://skills.sh) and installable via `npx skills add`.
 
+## Generated workflow skills
+
+The following public skill directories are generated from
+[`gitlab.com/zapier/skills`](https://gitlab.com/zapier/skills) and must not be
+edited directly in this repository:
+
+- `skills/workflows/create`
+- `skills/workflows/modify`
+- `skills/workflows/history`
+- `skills/workflows/list`
+- `skills/workflows/install`
+- `skills/workflows/doctor`
+
+Make content changes in `zapier/skills`, where the human-edited sources and
+tests live. Its publisher opens `shared-skills/<source-commit>` pull requests
+that update these directories and `.shared-skills-source.json` together.
+Changes elsewhere in this public repository continue to use the authoring
+guidance below.
+
 ## Creating a new skill
 
 ### Directory structure
