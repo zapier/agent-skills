@@ -112,6 +112,17 @@ want="$(cd "$scope" && pwd -P)"
 [ "$got" = "$want" ] && ok "update cwd = scope root ($want)" || bad "expected update cwd [$want]; got [$got]"
 rm -rf "$scope" "$cwdfile"; teardown
 
+echo "Case 14: symlinked skill dirs (the skills CLI layout) -> fingerprint still sees the change"
+setup
+real="$(mktemp -d)"; mkdir -p "$real/workflows-doctor"; printf 'version: 1\n' > "$real/workflows-doctor/SKILL.md"
+linkroot="$(mktemp -d)"; ln -s "$real/workflows-doctor" "$linkroot/workflows-doctor"
+stub="printf 'syncing skills, 0 errors\n'; printf 'version: 2\n' > '$real/workflows-doctor/SKILL.md'"
+errfile="$(mktemp)"
+RUN_OUT="$(ZAPIER_WORKFLOWS_DEBUG=1 ZAPIER_WORKFLOWS_DOCTOR_NOW="$NOW" ZAPIER_WORKFLOWS_DOCTOR_BUNDLE_ROOT="$linkroot" ZAPIER_WORKFLOWS_DOCTOR_UPDATE_CMD="$stub" bash "$SCRIPT" 2>"$errfile")"
+RUN_RC=$?; RUN_ERR="$(cat "$errfile")"; rm -f "$errfile"
+want_state updated; want_stdout_has "$NOTE_SUBSTR"; want_rc0
+rm -rf "$real" "$linkroot"; teardown
+
 echo ""
 echo "TOTAL: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

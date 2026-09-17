@@ -75,10 +75,13 @@ scope_root() {
 # "did an update actually change anything on disk" -- a signal that cannot misfire
 # on CLI wording, unlike output parsing. cksum/find/sort only (bash 3.2-safe; no
 # jq/stat/shasum). No matches -> a stable constant, so before==after when nothing changed.
+# -L because the skills CLI installs each skill as a symlink (~/.claude/skills/<skill>
+# -> ~/.agents/skills/<skill>), and plain find will not descend one: the root itself is
+# real, so resolving it in bundle_root() is not enough to see its children.
 bundle_fingerprint() {
   local root="$1"
   [ -d "$root" ] || { printf '0'; return; }
-  find "$root" -maxdepth 3 -path '*workflows*/SKILL.md' -type f -exec cksum {} + 2>/dev/null \
+  find -L "$root" -maxdepth 3 -path '*workflows*/SKILL.md' -type f -exec cksum {} + 2>/dev/null \
     | sort | cksum | awk '{print $1}'
 }
 
