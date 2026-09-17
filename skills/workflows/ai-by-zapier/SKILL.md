@@ -41,7 +41,7 @@ Configure a basic AI by Zapier step: instructions, runtime context, outputs, int
 1. Discover AI by Zapier and its normal `get_completion` action (`write`). Use it for both supplied-context and tool-enabled work, not `get_completion_agentic`.
 2. Read editable fields, defaults, and dependent choices using your surface's discovery instructions. If a complete schema is available, retain its `contentSchema`, definitions, references, and annotations; prefer it over these examples.
 3. This fallback was checked against `AICLIAPI@4.0.27`. Public UUID tool connections are supported from `4.0.26`. It documents the basic shapes below, not every possible capability or every future version. Do not extrapolate an unsupported shape or override conflicting live metadata.
-4. Use the live model default unless the user requests a different supported model. The examples use `premium/auto`, the checked version's managed default, with `authentication_id: "0"`. `standard/auto` is prompt-only and does not support these tool configurations. For other models, resolve provider, authentication, and model choices in their dependency order; a visible model is not proof of tool support or managed-credential eligibility.
+4. Use the live model default unless the user requests a different supported model. All examples use `authentication_id: "0"`; the tool-enabled examples use `premium/auto`, the checked version's managed default, and the prompt-only example uses `standard/auto`. `standard/auto` is prompt-only and cannot carry tools. For other models, resolve provider, authentication, and model choices in their dependency order; a visible model is not proof of tool support or managed-credential eligibility.
 
 Use language reasoning on supplied data without external lookups when it is sufficient. Add integration tools when the AI needs to choose an action or adapt a lookup. Keep predetermined searches and known final side effects as ordinary durable workflow steps; an embedded write needs an explicitly approved, bounded decision loop. Adding a tool enables a capability; it does not call it.
 
@@ -110,9 +110,11 @@ Choose the policy deliberately. `require_approval` is the default when omitted; 
 
 Only use `always_allow` after the user authorizes the bounded behavior, especially writes. If review is required, confirm the execution surface supports that review/resume flow before running. Do not silently change the policy to get past a halt. Permissions and other execution limits still apply.
 
-## Always include fail
+## Include fail in tool-enabled configs
 
-Always include exactly one explicit failure exit in the configured `tools` list:
+A prompt-only step omits `tools` entirely. Adding `fail` alone makes the step tool-enabled and requires a tool-capable model, so do not add it just to create a failure path; AbZ manages the failure channel at execution.
+
+Every tool-enabled configuration includes exactly one explicit failure exit in its `tools` list:
 
 ```json
 {
@@ -122,7 +124,7 @@ Always include exactly one explicit failure exit in the configured `tools` list:
 }
 ```
 
-Tell the step to use it when required external work cannot be completed rather than fabricate a result or claim success. AbZ also adds this builtin automatically and deduplicates builtin names; one explicit entry makes the intended failure path visible in the authored configuration. Tool availability still depends on the model and account. This recipe assumes tool-enabled access, including when `fail` is the only configured tool; do not use it to bypass prompt-only restrictions.
+Tell the step to use it when required external work cannot be completed rather than fabricate a result or claim success. AbZ also adds this builtin automatically and deduplicates builtin names; one explicit entry makes the intended failure path visible in the authored configuration. Tool availability still depends on the model and account.
 
 ## Complete basic step
 
@@ -130,21 +132,20 @@ These are decoded `get_completion` inputs: put them in `sdk.runAction(...).input
 
 ```json
 {
-  "model_id": "premium/auto",
+  "model_id": "standard/auto",
   "authentication_id": "0",
-  "instructions": "Summarize the supplied note in one sentence. Do not claim to read external data or send any messages. If the task cannot be completed, use fail rather than inventing a result.",
+  "instructions": "Summarize the supplied note in one sentence. Do not claim to read external data or send any messages. If the task cannot be completed, return a clear failure rather than inventing a result.",
   "inputFields": {
     "note": "The launch moved to Friday after final testing."
   },
   "includeWorkflowData": false,
   "outputFields": [
     { "name": "summary", "type": "text", "isRequired": true }
-  ],
-  "tools": [
-    { "type": "builtin", "id": "tool_fail", "builtin_tool_name": "fail" }
   ]
 }
 ```
+
+This example is prompt-only: it has no `tools`, so no tool-capable model is needed. Add tools only when the step must choose an action or run external work, as in the integration and web examples below.
 
 Replace sample context with runtime values from the trigger or prior steps; JSON-stringify structured context into a named `inputFields` string when needed. `includeWorkflowData: false` keeps this example independent of automatic Zap history; it does not remove the explicit inputs.
 
