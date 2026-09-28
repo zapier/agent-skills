@@ -4,7 +4,7 @@ description: Modify and republish an existing durable workflow using the Zapier 
 license: MIT
 metadata:
   author: zapier
-  version: "2.2.0"
+  version: "2.3.0"
   sdk_cli_min: "0.74.0"  # first @zapier/zapier-sdk-cli with publish-workflow-draft --manual (COSUB-1076)
   sdk_cli_validated: "0.74.0"
   refresh_source: "zapier/agent-skills"
@@ -24,6 +24,26 @@ Use the public SDK CLI experimental command surface. Do not use `zapier-sdk-code
 ## Compatibility Gate
 
 Before using this skill, run the `workflows-doctor` bundle compatibility check. If `workflows-doctor` is not installed or cannot be loaded, run `workflows-install` or install `workflows-doctor` from `zapier/agent-skills` before continuing. If `workflows-doctor` reports SDK/skill drift, follow its refresh instructions, stop this skill invocation, reload the agent workspace if needed, and ask the user to rerun the original request.
+
+## Source Files Are A Complete Map
+
+Read this before Step 3. It is the one thing this skill can get wrong that destroys the user's code.
+
+A workflow's `source_files` is **every** file it is built from, keyed by the path the platform stores it under — `workflow.ts`, `lib/format.ts`, `prompts/summarize.md`. Multi-file workflows are normal: the editor shows every file as a tab, so users and other agents create them routinely. Three rules follow:
+
+- **Read the keys. Never assume them.** `printf '%s' "$FETCHED_SOURCE_FILES" | jq -r 'keys[]'`. A workflow with helper modules has several, and their names are the user's choice.
+- **The entrypoint is not always `workflow.ts`.** It is the single top-level `workflow.<extension>`, where the extension is one of `.ts`, `.mts`, `.js`, `.mjs`, `.cjs`, or `.cts`. Read which one from the keys. Every published workflow has exactly one — the platform rejects zero or several — so this is a lookup, not a guess.
+- **Publishing replaces `source_files` wholesale.** A published version or a draft update stores exactly the map you send. Nothing merges it with what was there, and no server-side guard preserves a file you left out. So **a key you omit is a file you deleted**, and the workflow's next run fails on an unresolved import. Every publish from this skill sends every file, including the ones you did not touch.
+
+`package.json` is never part of `source_files`. It is local type-checking scaffolding, and the platform rejects it as a reserved filename along with a top-level `index.*` and anything named `_zapier_*`. Dependencies travel in `--dependencies`, the runtime version in `--zapier-durable-version`.
+
+Every step that touches the map — writing it out in Step 4, rebuilding it in Steps 5 and 6 — goes through this skill's script, which enforces the rules above and fails loudly instead of publishing a map that lost a file:
+
+```bash
+bash scripts/source-files.sh --help
+```
+
+Resolve `scripts/source-files.sh` relative to this skill's own directory. Use it rather than hand-rolling a `jq` pipeline: a hand-rolled build that silently produces one key looks exactly like one that worked.
 
 ## Step 1: Identify The Workflow
 
@@ -64,9 +84,18 @@ zapier-sdk --experimental get-workflow-draft <workflow-id> <draft-id> --json
 
 Capture from the fetched draft:
 
-- `source_files`, especially `source_files["workflow.ts"]` — this may contain unpublished edits; treat it as the user's in-progress work, not stale data.
+- `source_files` — the **whole** map, not one file out of it (see **Source Files Are A Complete Map** above). Keep it as fetched; you need it again to build the publish and to verify it. On the draft path it may contain unpublished edits; treat it as the user's in-progress work, not stale data.
 - `draft_revision` — needed for optimistic concurrency on every write.
 - `dependencies`, `zapier_durable_version`, `trigger`, `connections`, and `app_versions`.
+
+Keep the fetched map in a shell variable for the rest of the flow — it is the base every later check compares against:
+
+```bash
+# Draft path:
+FETCHED_SOURCE_FILES="$(zapier-sdk --experimental get-workflow-draft <workflow-id> <draft-id> --json | jq '.source_files')"
+# Direct-publish path:
+FETCHED_SOURCE_FILES="$(zapier-sdk --experimental get-workflow-version <workflow-id> <newest-version-id> --json | jq '.source_files')"
+```
 
 On either path, also fetch the workflow itself for its name, enabled state, and metadata:
 
@@ -107,9 +136,30 @@ If the draft's `source_files`, trigger, connections, or app versions differ from
 
 ## Step 4: Make The Edit
 
-Prefer editing an existing local workflow file if one exists. Otherwise, write `source_files["workflow.ts"]` into a local `workflow.ts` in a workflow-specific directory and edit that copy.
+Write **every** entry of the fetched map into a workflow-specific directory, each at its own key as a relative path, then edit that copy:
 
-Apply the requested change narrowly. Preserve existing Zod schemas, `ctx.step` boundaries, connection aliases, dependency pins, durable runtime version, connection bindings, app-version bindings, trigger configuration, and visibility/enabled state unless there is a reason to change them. On the draft path, preserve any unpublished draft content that isn't part of the requested change.
+```bash
+WF_DIR="<working-directory>/<workflow-name>"
+bash scripts/source-files.sh write "$WF_DIR" --from "$FETCHED_SOURCE_FILES"
+```
+
+That reproduces the workflow's real layout on disk — `lib/format.ts` lands at `$WF_DIR/lib/format.ts`, because that relative path is both the storage key and what the source's own imports resolve against. Write out the files you are not going to change too: Step 6 rebuilds the published map from this directory, so **a file that never reaches disk is a file you are about to delete.**
+
+An existing local copy of the workflow is only safe to edit if it holds every file the fetch returned. If it is missing one, or is a bare `workflow.ts` from an older run of this skill, write the fetch out fresh instead — the publish is rebuilt from the directory, not from the fetch.
+
+Apply the requested change narrowly. Preserve existing Zod schemas, `ctx.step` boundaries, connection aliases, dependency pins, durable runtime version, connection bindings, app-version bindings, trigger configuration, and visibility/enabled state unless there is a reason to change them. Leave every other file in the map exactly as fetched, byte for byte — a helper module you never opened must not be reformatted, re-indented, or rewritten. On the draft path, preserve any unpublished draft content that isn't part of the requested change.
+
+Edits that span files are fine: adding a helper module, or moving a function into one, is a normal change. Keep the `defineDurable` call and its `ctx.step` boundaries in the entrypoint so the editor can still read the step graph (see `workflows-create`, **Visualizer-Friendly Structure**).
+
+### Deleting A File Is Never Incidental
+
+Removing a helper module is a legitimate change — but only ever a deliberate one. The build in Steps 5 and 6 fails when a fetched file is missing, which is what stops an accidental deletion reaching the platform. So when a deletion **is** intended:
+
+1. Say so in the Step 6 confirmation summary, naming each file and why it is going.
+2. Get the user's explicit agreement to the deletion itself, separately from the rest of the change.
+3. Only then drop the file from the map you pass to `--base`, so the guard checks the smaller set you meant.
+
+Never satisfy the guard by dropping files from `--base` to make a failing build pass. The failure means the build lost a file; the fix is to write the file back.
 
 When the edit adds a new AI/LLM step, follow `workflows-create` Phase 2: always use "AI by Zapier" (`AICLIAPI`, action `get_completion`) and select the model with `model_id` — the user's named provider/model if they gave one, otherwise the default `"advanced/auto"` with built-in credentials (`authentication_id: "0"`). Only use a raw-provider AI app if the user explicitly asks for that standalone app or needs a capability AI by Zapier lacks.
 
@@ -117,11 +167,13 @@ When the edit adds a new AI/LLM step, follow `workflows-create` Phase 2: always 
 
 For non-trivial changes, propose a test run before publishing. This may run real downstream actions, so summarize side effects and wait for confirmation.
 
-Build `source_files` from the local file:
+Build the complete `source_files` map from the workflow directory, checking it against the fetch:
 
 ```bash
-SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
+SOURCE_FILES="$(bash scripts/source-files.sh build "$WF_DIR" --base "$FETCHED_SOURCE_FILES")"
 ```
+
+`--base` is what makes this safe: the command exits non-zero and names any file the fetch had that the build does not, instead of printing a map that quietly deletes it. Do not publish or run a map built without it, and do not fall back to assembling one by hand if it fails — read the file it names and put that file back.
 
 Run the workflow:
 
@@ -152,12 +204,15 @@ Before writing anything, summarize for the user:
 4. The values being preserved, including dependencies, durable version, enabled state, connections, app versions, and trigger configuration.
 5. The **start mode** captured in Step 3 (`trigger` or `manual`) and that it is unchanged by this edit — or, if the request is to change it, state the change explicitly (adding a trigger to a manual workflow, or removing one). A modify never changes the start mode as a side effect.
 6. The publish path chosen in Step 2, and — on the draft path — **any unpublished draft changes found in Step 3** (publishing the draft ships those too; see 6B).
+7. The files being published: which were edited, which are unchanged, which are new, and — only if the user asked for a deletion — which are being removed (see **Deleting A File Is Never Incidental**). The build's stderr summary gives you the first three.
 
-Wait for explicit confirmation, then build `source_files`:
+Wait for explicit confirmation, then build the complete `source_files` map:
 
 ```bash
-SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
+SOURCE_FILES="$(bash scripts/source-files.sh build "$WF_DIR" --base "$FETCHED_SOURCE_FILES")"
 ```
+
+If that fails, stop. It means the map you were about to publish would delete a file the workflow has. Never work around it by building the map another way.
 
 **Before publishing on either path, confirm the version you are about to publish matches the start mode captured in Step 3:** a `trigger`-mode workflow's published version must carry its trigger and be published **without** `--manual`; a `manual`-mode workflow's must carry no trigger and be published **with** `--manual` (unless the request is explicitly to change the mode, in which case match the intended new mode). Pass **exactly one** of trigger / `--manual` — the platform contract is a discriminated union and rejects both together as a contradiction. A `trigger`-mode republish that loses its trigger is a silent-triggerless regression. *How* you pass this differs by path — the trigger is a `--trigger` flag on a direct publish but lives in the stored draft on the draft path — so see the path-specific check in 6A and 6B below.
 
@@ -228,7 +283,7 @@ Omitted fields keep their stored draft values, so only pass `--trigger`, `--conn
 
 **Start-mode check (draft path):** the trigger lives in the stored draft and `publish-workflow-draft` takes no `--trigger` flag — it publishes whatever the draft holds. So a correct `trigger`-mode draft publish has *no* `--trigger` at publish time; that is expected, not a dropped trigger. First confirm, immediately before `publish-workflow-draft`, that the draft's stored `trigger` still matches the captured (or intended) start mode — a `trigger`-mode draft still carries its trigger, a `manual`-mode draft none (read it back with `get-workflow-draft` if unsure). Then declare the start mode at publish: a `manual`-mode workflow passes `--manual` on `publish-workflow-draft` (below); a `trigger`-mode workflow's draft already holds its trigger, so publish **without** `--manual`. Never combine a stored trigger with `--manual` — the platform contract rejects both together. Clearing the trigger with `--trigger null` on the `update-workflow-draft` above is exactly how a `trigger`-mode workflow silently becomes manual.
 
-**If the user chose to publish later,** stop here: report the draft ID and the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response — so they can review and publish from the editor, or ask you to publish in a follow-up. The final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow).
+**If the user chose to publish later,** stop here: report the draft ID and the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/<source-file-key>`, using the `slug` from the draft response — so they can review and publish from the editor, or ask you to publish in a follow-up. The final segment is the file the editor opens on, and it must be an actual key of the draft's `source_files`: use the entrypoint, or the file you edited when that is more useful. Do not hardcode `workflow.ts` — on a workflow whose entrypoint is `workflow.mjs`, that link opens a file that does not exist.
 
 **Otherwise publish now.** The update response returns the new `draft_revision`; publish the variant matching the start mode (the draft already holds the trigger — the difference is only whether you pass `--manual`):
 
@@ -266,6 +321,15 @@ zapier-sdk --experimental list-workflow-versions <workflow-id> --json
 
 Confirm the newest version reflects the publish, the workflow is still enabled if it should be, and trigger/connection/app-version metadata was preserved.
 
+**Gate on file preservation.** Fetch the published version's `source_files` and diff its keys against the map captured in Step 3. Anything the fetch had and the published version lacks is a file this modify deleted:
+
+```bash
+PUBLISHED="$(zapier-sdk --experimental get-workflow-version <workflow-id> <new-version-id> --json | jq '.source_files')"
+jq -n --argjson before "$FETCHED_SOURCE_FILES" --argjson after "$PUBLISHED" '($before | keys) - ($after | keys)'
+```
+
+That must print `[]`. Anything else means the published version is missing files and the workflow will fail on an unresolved import — tell the user immediately and republish from the complete map rather than reporting the change as done. A deletion the user agreed to in Step 6 is the one expected exception, and only for the files they named.
+
 **Gate on start-mode preservation.** Compare the deployed start mode against the one captured in Step 3. The `enabled` state and the trigger's presence are independent — an `enabled` check alone will not catch a dropped trigger, so inspect `triggers[]` directly:
 
 - Captured mode **`trigger`** (and the edit was not meant to remove it) → require the read-back to still show a non-empty `triggers[]`, and `enabled` to match the workflow's **preserved** enabled state (Step 6A), not `enabled: true` unconditionally. A workflow that was disabled before the edit stays disabled and still passes this gate; only require `enabled: true` when the workflow was enabled before the edit (or the user asked to enable it). An empty `triggers[]` means the republish dropped the trigger (most often `--trigger` was not re-passed with the fetched config) — do **not** report the change as done; re-publish with the preserved `--trigger` and re-check. The `triggers[]` check, not the `enabled` state, is what proves the trigger survived: a triggered workflow can be legitimately disabled, and a disabled workflow that lost its trigger would still read back `enabled: false`.
@@ -280,9 +344,10 @@ Finish by reporting:
 - Whether the requested change was published, or saved to a draft for later publishing (include the draft ID).
 - The start mode (`trigger` or `manual`) and that it was preserved (or, if the change was to alter it, its new value), confirmed by the Step 7 gate.
 - Whether trigger, connection, and app-version metadata were preserved.
+- The files in the published version: how many, which were edited, and that every file the workflow had before is still there (confirmed by the file-preservation gate above). Name any file added or — with the user's prior agreement — removed.
 - Whether the workflow is enabled.
 - The trigger's `webhook_url`, if present.
-- The Zapier editor link: `https://zapier.com/durables-editor/<workflow-id>` — or, when the change was staged as a draft, the draft link `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`.
+- The Zapier editor link: `https://zapier.com/durables-editor/<workflow-id>` — or, when the change was staged as a draft, the draft link `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/<source-file-key>`, whose final segment is a real `source_files` key (the entrypoint, or the file you edited), never a hardcoded `workflow.ts`.
 
 ## Reverting
 
@@ -294,3 +359,13 @@ zapier-sdk --experimental get-workflow-version <workflow-id> <version-id> --json
 ```
 
 Then publish it like any other change through Step 6 — either path works: direct publish with the prior version's `source_files` and metadata, or load them into the draft with `update-workflow-draft` and publish the draft. Same confirmation and conflict handling as Step 6.
+
+A revert restores that version's whole map, so write it out and rebuild from it, with the version being restored as the base:
+
+```bash
+RESTORED_SOURCE_FILES="$(zapier-sdk --experimental get-workflow-version <workflow-id> <version-id> --json | jq '.source_files')"
+bash scripts/source-files.sh write "$WF_DIR" --from "$RESTORED_SOURCE_FILES"
+SOURCE_FILES="$(bash scripts/source-files.sh build "$WF_DIR" --base "$RESTORED_SOURCE_FILES")"
+```
+
+Write it into a fresh directory, or delete the old one first. Reusing a directory that still holds a newer version's files would publish those alongside the restored ones — the build walks the directory, so a leftover file is a published file. A revert that intentionally drops a file the current live version added is a deletion: confirm it as one (see **Deleting A File Is Never Incidental**).

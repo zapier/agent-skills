@@ -4,7 +4,7 @@ description: Create a durable Zapier workflow from natural language using @zapie
 license: MIT
 metadata:
   author: zapier
-  version: "1.7.0"
+  version: "1.8.0"
   sdk_cli_min: "0.74.0"  # first @zapier/zapier-sdk-cli with publish-workflow-draft --manual (COSUB-1076)
   sdk_cli_validated: "0.74.0"
   refresh_source: "zapier/agent-skills"
@@ -52,7 +52,7 @@ When publishing a workflow version you can omit `zod` entirely and the service i
 
 Ranges (`^1.2.3`, `~1.2`) are rejected with a 400 for the durable runtime version — whether you pass it as `--zapier-durable-version` or as the `@zapier/zapier-durable` entry in `--dependencies`. So `latest` is the only non-exact value it takes. Every other dependency does accept a range and stores it as written; pin those exactly anyway, for the reason above. An exact version is always fine; it must be at least 24h old.
 
-**Every package the generated `workflow.ts` imports must still appear in `--dependencies`** — the sandbox installs from `--dependencies`, not your local `package.json`, so a missing import (such as `zod`) fails the run with `Cannot find package`.
+**Every package the generated source imports must still appear in `--dependencies`** — that means every source file, not just the entrypoint. The sandbox installs from `--dependencies`, not your local `package.json`, so a missing import (such as a `zod` imported only by a helper module) fails the run with `Cannot find package`.
 
 The user must also have app connections configured at https://zapier.com/app/assets/connections for any app actions the workflow will run.
 
@@ -200,13 +200,20 @@ Ask the user to confirm before generating files, including explicit confirmation
 
 ## Phase 4: Generate The Workflow Project
 
-Create a workflow directory:
+Create a workflow directory. Later phases build the published `source_files` map by walking it, so keep it to this workflow's own files:
+
+```bash
+WF_DIR="<working-directory>/<kebab-case-workflow-name>"
+mkdir -p "$WF_DIR"
+```
 
 ```text
 <working-directory>/
   <kebab-case-workflow-name>/
-    package.json
-    workflow.ts
+    package.json          # local type-checking only; never part of source_files
+    workflow.ts           # the entrypoint
+    lib/                  # optional helper modules
+      format.ts
 ```
 
 `package.json` is for local type-checking only — the sandbox installs from
@@ -236,7 +243,24 @@ If you add a build script, use `--skipLibCheck` for now to avoid type-check fail
 }
 ```
 
-`workflow.ts` should:
+### One Entrypoint, As Many Other Files As The Workflow Needs
+
+A workflow's published source is a map of file paths to contents, so it can hold as many files as the code wants. Two rules bound it:
+
+- **Exactly one entrypoint**, named `workflow.` plus one of `.ts`, `.mts`, `.js`, `.mjs`, `.cjs`, or `.cts`, at the top level. Zero or several is rejected at publish. Default to `workflow.ts`.
+- **`defineDurable` and every `ctx.step` boundary live in the entrypoint.** Helper modules hold pure functions, schemas, constants, and prompt text; the workflow's shape stays in one file so the editor's visualizer can read the step graph from it (see **Visualizer-Friendly Structure** below).
+
+Keep a single `workflow.ts` for anything small — it is the easier thing to read and to modify later. Reach for a helper module when the workflow is genuinely big enough to want one: long Zod schemas, a shared formatting helper, a prompt too long to sit inline. Import them by relative path, extension included:
+
+```typescript
+import { formatRow } from "./lib/format.ts";
+```
+
+Nested paths are kept as-is when the workflow is published (`lib/format.ts` is stored under that key), so the imports resolve the same way in the sandbox as they do locally.
+
+Besides `package.json`, the platform rejects a top-level `index.*`, `.zapierrc`, and anything named `_zapier_*` as reserved filenames — do not generate those. A nested `lib/index.ts` is fine.
+
+The entrypoint (`workflow.ts` here) should:
 
 - Import `defineDurable` from `@zapier/zapier-durable`.
 - Import `createZapierSdk` from `@zapier/zapier-sdk`.
@@ -328,11 +352,13 @@ Other steps render as plain **code steps** — for example a step with no `runAc
 
 ## Phase 5: Test The Workflow
 
-Build `source_files` from `workflow.ts`:
+Build the complete `source_files` map from the workflow directory:
 
 ```bash
-SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
+SOURCE_FILES="$(bash scripts/source-files.sh build "$WF_DIR")"
 ```
+
+Resolve `scripts/source-files.sh` relative to this skill's own directory. It walks the directory, keys every file by its relative path (`lib/format.ts` stays `lib/format.ts`), excludes `package.json` and other local tooling, and refuses a set with no entrypoint or more than one — so a structural mistake fails here instead of as a 400 at publish. Use it rather than hand-rolling a `jq` pipeline: a map built by hand that ends up with only one key looks exactly like one that worked.
 
 Build the `connections` JSON from the selected aliases. It's a nested object — each alias maps to an object holding a `connectionId` (never a bare string). The same shape is used for `publish-workflow-version` in Phase 6:
 
@@ -393,7 +419,7 @@ Capture the returned workflow ID. Then decide how to ship the code:
     --json
   ```
 
-  Pass the same `--dependencies`, `--zapier-durable-version`, `--connections`, `--app-versions`, and — for a `Start mode: trigger` workflow — `--trigger` values Phase 6 would have passed to the publish. Then hand the user the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts`, using the `slug` from the draft response; the final segment is one of the draft's `source_files` keys (`workflow.ts` in this skill's flow) — to review and publish, or publish on their go-ahead. Carry the start-mode decision to the draft publish exactly as a direct publish would: a `Start mode: manual` workflow publishes with `--manual` (`publish-workflow-draft <workflow-id> <draft-id> --manual --enabled --json`); a `Start mode: trigger` workflow's draft already holds its `--trigger`, so publish without `--manual` (`publish-workflow-draft <workflow-id> <draft-id> --enabled --json`). Never pass `--trigger` and `--manual` together. Publishing consumes the draft. Skip Phase 7's version read-backs if nothing was published.
+  Pass the same `--dependencies`, `--zapier-durable-version`, `--connections`, `--app-versions`, and — for a `Start mode: trigger` workflow — `--trigger` values Phase 6 would have passed to the publish. Then hand the user the draft's editor link — `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/<source-file-key>`, using the `slug` from the draft response; the final segment is the file the editor opens on and must be a real key of the draft's `source_files`, so use the entrypoint you generated rather than a hardcoded `workflow.ts` — to review and publish, or publish on their go-ahead. Carry the start-mode decision to the draft publish exactly as a direct publish would: a `Start mode: manual` workflow publishes with `--manual` (`publish-workflow-draft <workflow-id> <draft-id> --manual --enabled --json`); a `Start mode: trigger` workflow's draft already holds its `--trigger`, so publish without `--manual` (`publish-workflow-draft <workflow-id> <draft-id> --enabled --json`). Never pass `--trigger` and `--manual` together. Publishing consumes the draft. Skip Phase 7's version read-backs if nothing was published.
 
 For a direct publish, the current SDK CLI expects `source_files` as a JSON object, not a path to `workflow.ts`.
 
@@ -436,7 +462,7 @@ How you publish follows directly from the **start mode** confirmed in Phase 3 �
 **`Start mode: trigger`** — publish with `--trigger`, using the config built above. The trigger is the signal; do **not** also pass `--manual` (that is the contradiction the gate rejects):
 
 ```bash
-SOURCE_FILES="$(jq -n --rawfile workflow workflow.ts '{"workflow.ts": $workflow}')"
+SOURCE_FILES="$(bash scripts/source-files.sh build "$WF_DIR")"
 
 zapier-sdk --experimental publish-workflow-version <workflow-id> "$SOURCE_FILES" \
   --dependencies '{"@zapier/zapier-sdk":"latest","zod":"4.3.6"}' \
@@ -516,7 +542,7 @@ zapier-sdk --experimental get-workflow-run <run-id> --json
 Finish by reporting:
 
 - Workflow name and ID.
-- Where `workflow.ts` lives locally.
+- Where the workflow project lives locally, and which files it has if there is more than one.
 - Whether testing passed.
 - Whether the deployed workflow is enabled.
 - Whether the workflow is private or account-visible.

@@ -4,7 +4,7 @@ description: List durable workflows in the authenticated Zapier account using th
 license: MIT
 metadata:
   author: zapier
-  version: "1.2.1"
+  version: "1.3.0"
   sdk_cli_min: "0.74.0"
   sdk_cli_validated: "0.74.0"
   refresh_source: "zapier/agent-skills"
@@ -54,7 +54,7 @@ A workflow's published state is not the whole story — it may also have open se
 zapier-sdk --experimental list-workflow-drafts <workflow-id> --json
 ```
 
-Surface each open draft's `slug`, `last_edited_at`, and `last_edited_by_user_id`, and whether its `base_version_id` matches the newest published version (an older base means the draft predates the current live version). Include the draft's editor link: `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts` — the final segment is one of the draft's `source_files` keys (`workflow.ts` in this bundle's flows). Do not fetch drafts for every workflow in a plain listing — it is one request per workflow; do it on request or for the workflows under discussion.
+Surface each open draft's `slug`, `last_edited_at`, and `last_edited_by_user_id`, and whether its `base_version_id` matches the newest published version (an older base means the draft predates the current live version). Include the draft's editor link: `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/<source-file-key>` — the final segment is the file the editor opens on, and must be an actual key of that draft's `source_files`. Read it from the draft rather than hardcoding `workflow.ts`: a workflow's entrypoint may be `workflow.mjs` (or `.ts`, `.mts`, `.js`, `.cjs`, `.cts`), and multi-file workflows are normal, so a guessed segment can link to a file that does not exist. Do not fetch drafts for every workflow in a plain listing — it is one request per workflow; do it on request or for the workflows under discussion.
 
 ## Ownership Scoping
 
