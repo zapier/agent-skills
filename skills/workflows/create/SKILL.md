@@ -241,7 +241,7 @@ If you add a build script, use `--skipLibCheck` for now to avoid type-check fail
 - Import `defineDurable` from `@zapier/zapier-durable`.
 - Import `createZapierSdk` from `@zapier/zapier-sdk`.
 - Create the SDK client once at module level: `const sdk = createZapierSdk()` above `defineDurable`
-- Use Zod for input validation when the workflow has input, and declare the input type as `defineDurable<Input, unknown>(...)`.
+- Use Zod for input validation when the workflow has input, and pass the schema as `inputSchema` in the object form of `defineDurable`.
 - Keep external side effects (app actions, fetches) inside `ctx.step` calls.
 - Make each app action exactly **one** `ctx.step` whose body is a single `return sdk.runAction({...})` call — one `runAction` per step.
 - Group validation, input normalization, simple guards, data shaping into steps as needed.
@@ -270,7 +270,7 @@ const input = InputSchema.parse(normalizeInput(rawInput));
 
 Generate durable source that can be turned into a meaningful step graph. Avoid overly dynamic construction.
 
-**`defineDurable` call shape — every call must resolve `run` to a function.** Use either the bare form `defineDurable<Input, unknown>("workflow-name", async (ctx, input) => { ... })` or the object form `defineDurable({ name: "workflow-name", inputSchema, outputSchema, description, run: async (ctx, input) => { ... } })`. `ctx` is always the first parameter of `run`; `input` is the optional second parameter, so `async (ctx) => { ... }` is also valid. These shapes are invalid and make the workflow fail on its first run with `durable.run is not a function`:
+**`defineDurable` call shape — every call must resolve `run` to a function.** Prefer the object form `defineDurable({ name: "workflow-name", inputSchema, outputSchema, description, run: async (ctx, input) => { ... } })`. The bare form `defineDurable("workflow-name", async (ctx, input) => { ... })` also works. `ctx` is always the first parameter of `run`; `input` is the optional second parameter, so `async (ctx) => { ... }` is also valid. These shapes are invalid and make the workflow fail on its first run with `durable.run is not a function`:
 
 - `defineDurable(async (ctx, input) => { ... })` — a bare function with no name. The function is treated as an options object, so `run` is never set. This is the most common mistake.
 - `defineDurable({ name: "workflow-name" })` — object missing `run`.
@@ -288,14 +288,14 @@ import { z } from "zod";
 const sdk = createZapierSdk();
 
 const InputSchema = z.object({ reaction: z.string() });
-type Input = z.infer<typeof InputSchema>;
 
 const TODOIST_APP_KEY = "TodoistV2CLIAPI";
 const TODOIST_CONNECTION = "todoist_primary";
 
-const workflow = defineDurable<Input, unknown>(
-  "example-workflow",
-  async (ctx, input) => {
+const workflow = defineDurable({
+  name: "example-workflow",
+  inputSchema: InputSchema,
+  run: async (ctx, input) => {
     // Plain code: guard outside any step.
     if (input.reaction !== "todo") {
       return { skipped: true };
@@ -317,7 +317,7 @@ const workflow = defineDurable<Input, unknown>(
 
     return { createdTask };
   },
-);
+});
 ```
 
 ### App-Action Step Shape (Editor Recognition)
