@@ -1,14 +1,33 @@
 # AGENTS.md
 
-This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, etc.) when authoring skills in this repository.
+Guidance for AI coding agents (Claude Code, Cursor, Copilot, etc.) working in
+this repository.
+
+## This repository is generated
+
+Everything here is exported from an internal Zapier repository, with commit
+history and authorship kept. Each export replaces the files in this
+repository, so:
+
+- Do not edit files here to change a skill, and do not open pull requests.
+  They are not merged; an automatic check fails on every pull request.
+- To report a problem with a skill or suggest a change, open an issue that
+  names the skill, what you expected, and what happened. Zapier maintainers
+  make the change in the internal source.
+- Using the skills is unaffected: install them with `npx skills add
+  zapier/agent-skills` as described in [README.md](README.md).
 
 ## Repository overview
 
-A collection of skills for AI coding agents, maintained by Zapier teams. Skills are packaged instructions and scripts that extend an agent's capabilities. Skills are indexed by [skills.sh](https://skills.sh) and installable via `npx skills add`.
+A collection of skills for AI coding agents, maintained by Zapier teams. Skills
+are packaged instructions and scripts that extend an agent's capabilities.
+Skills are indexed by [skills.sh](https://skills.sh) and installable via
+`npx skills add`. Groupings on skills.sh come from `skills.sh.json`.
 
-## Creating a new skill
+The sections below describe the format the skills here follow, for reading and
+running them.
 
-### Directory structure
+## Directory structure
 
 Skills are grouped into a subfolder per team or project under `skills/`:
 
@@ -24,7 +43,7 @@ skills/
       lib/                  # Optional: shared code for scripts
 ```
 
-### Naming conventions
+## Naming conventions
 
 - **Team/project folder**: `kebab-case` (e.g. `workflows`).
 - **Skill directory**: `kebab-case` (e.g. `install`, `build`).
@@ -32,7 +51,7 @@ skills/
 - **`name:` field**: prefix with `<team>-` (e.g. `workflows-install`). The folder can stay short, but the `name:` is what the agent sees once a skill is installed alongside skills from every other source — keep it unambiguous and collision-proof. Generic names like `install` or `build` **must** be namespaced.
 - **Scripts**: `kebab-case.sh` or `kebab-case.mjs`.
 
-### SKILL.md format
+## SKILL.md format
 
 ```markdown
 ---
@@ -65,7 +84,7 @@ Show example output users will see.
 Common issues and solutions, especially network/permissions errors.
 ```
 
-### Best practices for context efficiency
+## Best practices for context efficiency
 
 Only a skill's `name` and `description` load at startup; the full `SKILL.md` loads only when the agent decides the skill is relevant. To minimize context usage:
 
@@ -75,7 +94,7 @@ Only a skill's `name` and `description` load at startup; the full `SKILL.md` loa
 - **Prefer scripts over inline code** — script execution doesn't consume context (only output does).
 - **File references work one level deep** — link directly from SKILL.md to supporting files.
 
-### Script requirements
+## Script requirements
 
 - Bash scripts: use `#!/bin/bash` and `set -e`.
 - Node scripts: use `#!/usr/bin/env node` and the `.mjs` extension.
@@ -83,13 +102,7 @@ Only a skill's `name` and `description` load at startup; the full `SKILL.md` loa
 - Include a cleanup trap for temp files when scripts create them.
 - Reference scripts by relative path, e.g. `node scripts/<script>.mjs`.
 
-### Marketplace grouping
-
-Add each new skill's `name` to the appropriate group in `skills.sh.json` so it appears under the right section on skills.sh.
-
-### End-user installation
-
-Document the skills.sh install for public skills:
+## End-user installation
 
 ```bash
 npx skills add zapier/agent-skills --skill <skill-name>

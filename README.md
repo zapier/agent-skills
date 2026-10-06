@@ -1,5 +1,12 @@
 # Zapier Agent Skills
 
+> **This repository is generated.** Its contents are exported from an internal
+> Zapier repository, with commit history and authorship kept, and each export
+> is reviewed and approved by a Zapier maintainer before it is published here.
+> Pull requests opened here are not merged: the next export would overwrite
+> them. To report a problem or suggest a change, open an issue (see
+> [Contributing](#contributing)).
+
 A collection of skills for AI coding agents (Claude Code, Cursor, Copilot, etc.), maintained by Zapier teams. Skills are packaged instructions and scripts that extend an agent's capabilities.
 
 Skills follow the [Agent Skills](https://agentskills.io/) format and are indexed by [skills.sh](https://skills.sh).
@@ -15,13 +22,11 @@ skills/
       SKILL.md            # required
 ```
 
-See [AGENTS.md](AGENTS.md) for the authoring contract (naming, frontmatter, scripts).
+See [AGENTS.md](AGENTS.md) for the skill format (naming, frontmatter, scripts).
 
 ## Categories
 
 Skills are grouped by team or project. Each category's README lists its skills; the full, always-current index of every skill is on [skills.sh](https://skills.sh/zapier/agent-skills).
-
-<!-- One row per category. Add a row when a team adds its first skill. -->
 
 | Category | Description |
 | -------- | ----------- |
@@ -62,6 +67,17 @@ Not all Zapier skills live in this repo. This repo is the home for **non-connect
 - **Connectors** — per-app connector skills (one per integration). These are **not** installed from this repo; they are distributed through the connectors download API rather than skills.sh. The public GitHub home for connectors is still being set up — a direct link will be added here once it is live.
 
 If you are an agent looking for a connector-specific skill, do not expect to find it under `skills/` in this repo; use the connectors distribution channel instead.
+
+## Contributing
+
+This repository is a generated mirror, so it does not accept direct changes:
+
+- **Found a problem or have an idea?** Open an issue with the skill name, what
+  you expected, and what happened. A Zapier maintainer makes the change in the
+  internal source, and it appears here with the next export.
+- **Pull requests** get an automatic comment explaining this and a failing
+  check. A maintainer may use one as a reference for an upstream change, but
+  will close it rather than merge it.
 
 ## License
 

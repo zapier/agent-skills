@@ -2,6 +2,8 @@
 
 Skills for setting up, building, inspecting, and modifying Zapier Workflows from an agent-enabled coding workspace.
 
+These skills are generated from an internal Zapier repository. Pull requests that edit them here are not merged; see the [root README](../../README.md#contributing).
+
 ## Set Up Zapier Workflows
 
 Copy and paste this into your agent prompt:
