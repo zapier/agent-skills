@@ -4,9 +4,9 @@ description: List durable workflows in the authenticated Zapier account using th
 license: MIT
 metadata:
   author: zapier
-  version: "1.2.1"
-  sdk_cli_min: "0.74.0"
-  sdk_cli_validated: "0.74.0"
+  version: "1.3.0"
+  sdk_cli_min: "0.85.0"
+  sdk_cli_validated: "0.86.4"
   refresh_source: "zapier/agent-skills"
 ---
 
@@ -23,7 +23,7 @@ Before using this skill, run the `workflows-doctor` bundle compatibility check. 
 ```bash
 zapier-sdk --version
 zapier-sdk get-profile --json
-zapier-sdk --experimental --help
+zapier-sdk --stability experimental --help
 ```
 
 If auth fails, ask the user to run `zapier-sdk login` in an interactive terminal and retry.
@@ -31,7 +31,7 @@ If auth fails, ask the user to run `zapier-sdk login` in an interactive terminal
 ## List Workflows
 
 ```bash
-zapier-sdk --experimental list-workflows --json
+zapier-sdk --stability experimental list-workflows --json
 ```
 
 Parse the JSON output and format what the user asked for. Common useful fields may include `id`, `name`, `enabled`, `is_private`, `created_by_user_id`, `created_at`, `updated_at`, `description`, `current_version`, and trigger-related metadata if present.
@@ -39,7 +39,7 @@ Parse the JSON output and format what the user asked for. Common useful fields m
 For each workflow with an `id`, include the Zapier editor link:
 
 ```text
-https://zapier.com/durables-editor/<workflow-id>
+https://zapier.com/workflow/<workflow-id>
 ```
 
 Treat `trigger_url` as account-sensitive: firing it invokes the workflow as the authenticated account, so while the token in the URL is no longer a standalone credential, it is still not something to print gratuitously. Do not print `trigger_url` unless the user explicitly asks for it.
@@ -51,10 +51,10 @@ Check each entry in `triggers[]` for `details.webhook_url`, regardless of trigge
 A workflow's published state is not the whole story — it may also have open server drafts, and an open draft always holds unpublished work (publishing consumes drafts). When the user asks about unpublished changes, in-progress work, or why the editor shows something different from what's live, check:
 
 ```bash
-zapier-sdk --experimental list-workflow-drafts <workflow-id> --json
+zapier-sdk --stability experimental list-workflow-drafts <workflow-id> --json
 ```
 
-Surface each open draft's `slug`, `last_edited_at`, and `last_edited_by_user_id`, and whether its `base_version_id` matches the newest published version (an older base means the draft predates the current live version). Include the draft's editor link: `https://zapier.com/durables-editor/<workflow-id>/draft/<draft-slug>/workflow.ts` — the final segment is one of the draft's `source_files` keys (`workflow.ts` in this bundle's flows). Do not fetch drafts for every workflow in a plain listing — it is one request per workflow; do it on request or for the workflows under discussion.
+Surface each open draft's `slug`, `last_edited_at`, and `last_edited_by_user_id`, and whether its `base_version_id` matches the newest published version (an older base means the draft predates the current live version). Include the draft's editor link: `https://zapier.com/workflow/<workflow-id>/draft/<draft-slug>/workflow.ts` — the final segment is one of the draft's `source_files` keys (`workflow.ts` in this bundle's flows). Do not fetch drafts for every workflow in a plain listing — it is one request per workflow; do it on request or for the workflows under discussion.
 
 ## Ownership Scoping
 
@@ -67,7 +67,7 @@ Known quirk: `zapier-sdk get-profile` may return a UUID that does not match `lis
 If the user asks for recent activity, fetch runs for each relevant workflow:
 
 ```bash
-zapier-sdk --experimental list-workflow-runs <workflow-id> --json
+zapier-sdk --stability experimental list-workflow-runs <workflow-id> --json
 ```
 
 Use the most recent run. Be mindful of API volume for large accounts.
