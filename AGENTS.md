@@ -10,7 +10,8 @@ history and authorship kept. Each export replaces the files in this
 repository, so:
 
 - Do not edit files here to change a skill, and do not open pull requests.
-  They are not merged; an automatic check fails on every pull request.
+  They are not merged; a maintainer may use one as a reference for an
+  upstream change and will close it.
 - To report a problem with a skill or suggest a change, open an issue that
   names the skill, what you expected, and what happened. Zapier maintainers
   make the change in the internal source.
