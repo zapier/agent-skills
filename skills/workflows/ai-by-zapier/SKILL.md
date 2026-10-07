@@ -11,7 +11,7 @@ metadata:
 
 # AI by Zapier Workflow Steps
 
-Use this companion with `workflows-create` or `workflows-modify`; it configures the bounded AI step but does not replace the workflow lifecycle. If the request involves creating, testing, publishing, or enabling a complete workflow and neither lifecycle skill is loaded, load the appropriate one first.
+Use this companion with `workflows-create` or `workflows-modify`; it sets up the bounded AI step but does not replace the workflow lifecycle. If the request involves creating, testing, publishing, or enabling a complete workflow and neither lifecycle skill is loaded, load the appropriate one first.
 
 ## SDK CLI discovery
 
