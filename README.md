@@ -68,9 +68,8 @@ This repository is a generated mirror, so it does not accept direct changes:
 - **Found a problem or have an idea?** Open an issue with the skill name, what
   you expected, and what happened. A Zapier maintainer makes the change in the
   internal source, and it appears here with the next export.
-- **Pull requests** get an automatic comment explaining this and a failing
-  check. A maintainer may use one as a reference for an upstream change, but
-  will close it rather than merge it.
+- **Pull requests** are not merged. A maintainer may use one as a reference
+  for an upstream change, and will close it.
 
 ## License
 
