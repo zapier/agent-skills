@@ -47,9 +47,9 @@ bad() { fail=$((fail+1)); printf '  FAIL: %s\n' "$1"; }
 
 want_state()    { case "$RUN_ERR" in *"state=$1"*) ok "state=$1";; *) bad "expected state=$1; stderr=[$RUN_ERR]";; esac; }
 want_stdout_has(){ case "$RUN_OUT" in *"$1"*) ok "stdout has [$1]";; *) bad "expected stdout to contain [$1]; got [$RUN_OUT]";; esac; }
-want_stdout_empty(){ [ -z "$RUN_OUT" ] && ok "stdout empty" || bad "expected empty stdout; got [$RUN_OUT]"; }
-want_rc0()      { [ "$RUN_RC" -eq 0 ] && ok "exit 0" || bad "expected exit 0; got $RUN_RC"; }
-want_marker_line(){ local n="$1" exp="$2" got; got="$(sed -n "${n}p" "$MARKER")"; [ "$got" = "$exp" ] && ok "marker L$n=$exp" || bad "marker L$n expected [$exp] got [$got]"; }
+want_stdout_empty(){ if [ -z "$RUN_OUT" ]; then ok "stdout empty"; else bad "expected empty stdout; got [$RUN_OUT]"; fi; }
+want_rc0()      { if [ "$RUN_RC" -eq 0 ]; then ok "exit 0"; else bad "expected exit 0; got $RUN_RC"; fi; }
+want_marker_line(){ local n="$1" exp="$2" got; got="$(sed -n "${n}p" "$MARKER")"; if [ "$got" = "$exp" ]; then ok "marker L$n=$exp"; else bad "marker L$n expected [$exp] got [$got]"; fi; }
 
 STUB_CHANGED='printf "Updated workflows-doctor 1.2.0 -> 1.3.0\n"'
 STUB_UNCHANGED='printf "Checking skills from source: zapier/agent-skills\nAll global skills are up to date\n"'
@@ -81,7 +81,7 @@ echo "Case 8: corrupt marker -> treated as due"
 setup; mkdir -p "$CACHE_DIR"; printf 'garbage\n\nxyz\n' > "$MARKER"; run "$STUB_UNCHANGED"; want_state noop; want_rc0; teardown
 
 echo "Case 9: not in a git repo -> pwd fallback, exits 0"
-setup; nonrepo="$(mktemp -d)"; ( cd "$nonrepo" && ZAPIER_WORKFLOWS_DEBUG=1 ZAPIER_WORKFLOWS_DOCTOR_NOW="$NOW" ZAPIER_WORKFLOWS_DOCTOR_BUNDLE_ROOT="$EMPTY_ROOT" ZAPIER_WORKFLOWS_DOCTOR_UPDATE_CMD="$STUB_UNCHANGED" bash "$SCRIPT" >/dev/null 2>&1 ); rc=$?; [ "$rc" -eq 0 ] && ok "non-repo exit 0" || bad "non-repo exit $rc"; rm -rf "$nonrepo"; teardown
+setup; nonrepo="$(mktemp -d)"; ( cd "$nonrepo" && ZAPIER_WORKFLOWS_DEBUG=1 ZAPIER_WORKFLOWS_DOCTOR_NOW="$NOW" ZAPIER_WORKFLOWS_DOCTOR_BUNDLE_ROOT="$EMPTY_ROOT" ZAPIER_WORKFLOWS_DOCTOR_UPDATE_CMD="$STUB_UNCHANGED" bash "$SCRIPT" >/dev/null 2>&1 ); rc=$?; if [ "$rc" -eq 0 ]; then ok "non-repo exit 0"; else bad "non-repo exit $rc"; fi; rm -rf "$nonrepo"; teardown
 
 echo "Case 10: update fails -> still exit 0"
 setup; run "$STUB_FAIL"; want_rc0; teardown
@@ -109,7 +109,7 @@ stub="pwd -P > '$cwdfile'"
     ZAPIER_WORKFLOWS_DOCTOR_UPDATE_CMD="$stub" bash "$SCRIPT" >/dev/null 2>&1 )
 got="$(cat "$cwdfile")"
 want="$(cd "$scope" && pwd -P)"
-[ "$got" = "$want" ] && ok "update cwd = scope root ($want)" || bad "expected update cwd [$want]; got [$got]"
+if [ "$got" = "$want" ]; then ok "update cwd = scope root ($want)"; else bad "expected update cwd [$want]; got [$got]"; fi
 rm -rf "$scope" "$cwdfile"; teardown
 
 echo "Case 14: symlinked skill dirs (the skills CLI layout) -> fingerprint still sees the change"
