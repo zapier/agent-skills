@@ -1,12 +1,5 @@
 # Zapier Agent Skills
 
-> **This repository is generated.** Its contents are exported from an internal
-> Zapier repository, with commit history and authorship kept, and each export
-> is reviewed and approved by a Zapier maintainer before it is published here.
-> Pull requests opened here are not merged: the next export would overwrite
-> them. To report a problem or suggest a change, open an issue (see
-> [Contributing](#contributing)).
-
 A collection of skills for AI coding agents (Claude Code, Cursor, Copilot, etc.), maintained by Zapier teams. Skills are packaged instructions and scripts that extend an agent's capabilities.
 
 Skills follow the [Agent Skills](https://agentskills.io/) format and are indexed by [skills.sh](https://skills.sh).
