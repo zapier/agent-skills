@@ -32,7 +32,7 @@ Keep three namespaces separate:
 
 Outer SDK `connection` aliases do not populate these action inputs. For an embedded tool, put the UUID in that tool object, not in the outer AbZ call's `connection`. Use the same chosen connection and settled parent values for the target action's field/choice discovery. If the selected version does not accept the reference, report that version/contract mismatch instead of inventing another identifier.
 
-Use the exact command signatures shown by the installed CLI's `--help`; command flags may evolve. Record the discovered implementation, action, fields, choices, defaults, and connection metadata so you do not repeat calls or substitute remembered values.
+Use the exact command signatures shown by the installed CLI's `--help`; command flags may evolve. Record the discovered implementation, action, fields, choices, defaults, and connection metadata so you do not repeat calls or fall back on remembered values.
 
 Configure a basic AI by Zapier step: instructions, runtime context, outputs, integration actions, and public web research. Use the live action schema when available; the shapes below are a bounded fallback for callers whose field discovery omits the nested contract.
 
