@@ -188,7 +188,7 @@ Webhooks by Zapier and other catch-hook apps are real triggers. Discover and con
 
 ### Learn from an existing workflow when useful
 
-If a similar working workflow exists, it can provide realistic source, connection bindings, and trigger configuration. This is optional, not a required first step. Read it with your surface's workflow-inspection tools and borrow only the patterns relevant to the new workflow.
+If a similar working workflow exists, it can provide realistic source, connection bindings, and trigger configuration. This is optional, not a required first step. Read it with your surface's workflow-inspection tools and borrow only the patterns relevant to the new workflow. Older workflows may use the positional `defineDurable("name", run)` form or wrap input in a `normalizeInput` helper. Both still work; new code needs neither.
 
 ## Phase 3: Confirm the build plan
 
