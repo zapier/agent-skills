@@ -50,7 +50,7 @@ Rules:
 - If the first SDK CLI version that supports a command or flag is uncertain, set `sdk_cli_min` to the SDK CLI version used while introducing that skill dependency and note the conservative choice in the change description.
 - When validating or republishing skills against a newer SDK CLI, update `sdk_cli_validated` to that version even if `sdk_cli_min` does not change.
 - When adding or removing SDK command dependencies, update the `workflows-doctor` bundle compatibility checklist.
-- When adding a new workflow skill, add it to `skills.sh.json`, `workflows-install`, `workflows-doctor`, and this README skill table.
+- When adding a new workflow skill, add its folder under `skills/workflows/` in the source repository, then run `node scripts/compose.mjs` and `node scripts/generate-github-skills.mjs`. The generator adds the skill to `skills.sh.json` and this README skill table; do not edit those by hand. Then add the skill by hand to the bundle lists in `workflows-install` and `workflows-doctor`.
 - Keep `refresh_source` as `zapier/agent-skills`; do not reintroduce the deleted or archived `tjzap/agent-skills` fork.
 
 `sdk_cli_min` and `sdk_cli_validated` apply to the workflow skill bundle, even though the fields are repeated in each `SKILL.md` for discoverability.
