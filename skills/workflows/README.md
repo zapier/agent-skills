@@ -15,15 +15,17 @@ Copy and paste this into your agent prompt:
 
 ## Skills
 
+<!-- skills-table:start (generated from each skill's name and description; do not edit by hand) -->
 | Skill | Purpose |
 |---|---|
-| `workflows-install` | Set up the Zapier SDK CLI, install companion skills, authenticate, and run a read-only smoke test |
-| `workflows-doctor` | Diagnose SDK CLI and workflow skill compatibility, refresh the bundle on SDK drift, and auto-update the workflow skills about once a day to pick up content-only improvements |
-| `workflows-create` | Create, test, publish, and manually trigger durable workflows |
-| `workflows-ai-by-zapier` | Configure an AI by Zapier step inside a workflow: runtime context, outputs, app and web tools, and a failure exit |
-| `workflows-list` | List workflows visible to the authenticated Zapier account |
-| `workflows-history` | Inspect workflow run history and durable run details |
-| `workflows-modify` | Fetch, edit, test, republish, and verify existing workflows |
+| `workflows-ai-by-zapier` | Configure a basic AI by Zapier step with runtime context, outputs, typed integration tools, public web search, and a failure exit |
+| `workflows-create` | Create a durable Zapier workflow from natural language using @zapier/zapier-durable and the Zapier SDK CLI |
+| `workflows-doctor` | Diagnose Zapier Workflows skill and SDK CLI compatibility |
+| `workflows-history` | Show run history for a specific durable workflow using the Zapier SDK experimental Code Workflows commands |
+| `workflows-install` | Install the Zapier SDK CLI for Zapier Workflows Early Access and bootstrap the workflows companion skills |
+| `workflows-list` | List durable workflows in the authenticated Zapier account using the Zapier SDK experimental Code Workflows commands |
+| `workflows-modify` | Modify and republish an existing durable workflow using the Zapier SDK experimental Code Workflows commands |
+<!-- skills-table:end -->
 
 ## Daily Skill-Freshness Auto-Update
 

@@ -5,12 +5,12 @@
     {
       "name": "Workflows",
       "skills": [
-        "workflows-install",
-        "workflows-doctor",
-        "workflows-create",
         "workflows-ai-by-zapier",
-        "workflows-list",
+        "workflows-create",
+        "workflows-doctor",
         "workflows-history",
+        "workflows-install",
+        "workflows-list",
         "workflows-modify"
       ]
     }
