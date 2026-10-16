@@ -168,6 +168,7 @@ npx skills add zapier/agent-skills --skill workflows-create --yes
 npx skills add zapier/agent-skills --skill workflows-list --yes
 npx skills add zapier/agent-skills --skill workflows-history --yes
 npx skills add zapier/agent-skills --skill workflows-modify --yes
+npx skills add zapier/agent-skills --skill workflows-ai-by-zapier --yes
 ```
 
 After updating skills, stop the current skill invocation. Tell the user to reload the agent workspace and rerun their original request. Do not promise that the current invocation has changed its already-loaded instructions.
