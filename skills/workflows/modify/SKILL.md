@@ -85,7 +85,11 @@ zapier-sdk --stability experimental get-workflow-version <workflow-id> <base_ver
 
 If the draft's `source_files`, trigger, connections, or app versions differ from the base version, the draft holds unpublished work. Note a short summary of the differences — you'll surface it at confirmation time in Step 6. Never silently publish it and never silently discard it.
 
-**Check the draft isn't stale.** A draft forks from the live version at creation, but the live version can move past it — another draft may have published since. Publishing a stale draft ships its old base content over everything the newer versions changed. Compare the newest version's `id` (from `list-workflow-versions`) to the draft's `base_version_id`:
+**Check the draft isn't stale.** A draft forks from the live version at creation, but the live version can move past it — another draft may have published since. Publishing a stale draft ships its old base content over everything the newer versions changed. Compare the newest version's `id` to the draft's `base_version_id`:
+
+```bash
+zapier-sdk --stability experimental list-workflow-versions <workflow-id> --json
+```
 
 - **Base is the newest version:** not stale — continue.
 - **Stale, with no unpublished changes** (the divergence check above found none): the draft is a leftover shell of an old version. Do not build on it — discard it, fork a fresh draft from live, tell the user you did, and continue on the fresh draft:
@@ -206,7 +210,7 @@ Confirm the newest version reflects the publish, the workflow is still enabled i
 
 **Gate on start-mode preservation.** Compare the deployed start mode against the one captured in Step 3. The `enabled` state and the trigger's presence are independent — an `enabled` check alone will not catch a dropped trigger, so inspect `triggers[]` directly:
 
-- Captured mode **`trigger`** (and the edit was not meant to remove it) → require the read-back to still show a non-empty `triggers[]`, and `enabled` to match the workflow's **preserved** enabled state (captured in Step 3), not `enabled: true` unconditionally. A workflow that was disabled before the edit stays disabled and still passes this gate; only require `enabled: true` when the workflow was enabled before the edit (or the user asked to enable it). An empty `triggers[]` means the republish dropped the trigger (most often `--trigger` was not re-passed with the fetched config) — do **not** report the change as done; re-publish with the preserved `--trigger` and re-check. The `triggers[]` check, not the `enabled` state, is what proves the trigger survived: a triggered workflow can be legitimately disabled, and a disabled workflow that lost its trigger would still read back `enabled: false`.
+- Captured mode **`trigger`** (and the edit was not meant to remove it) → require the read-back to still show a non-empty `triggers[]`, and `enabled` to match the workflow's **preserved** enabled state (captured in Step 3), not `enabled: true` unconditionally. A workflow that was disabled before the edit stays disabled and still passes this gate; only require `enabled: true` when the workflow was enabled before the edit (or the user asked to enable it). An empty `triggers[]` means the published draft no longer carried the trigger (most often an `update-workflow-draft` call passed `--trigger null` or a changed config) — do **not** report the change as done; restore the captured config with `update-workflow-draft --trigger '<captured trigger JSON>'`, test the new draft revision, publish it, and re-check. The `triggers[]` check, not the `enabled` state, is what proves the trigger survived: a triggered workflow can be legitimately disabled, and a disabled workflow that lost its trigger would still read back `enabled: false`.
 - Captured mode **`manual`** (and the edit was not meant to add a trigger) → require `triggers[]` to remain empty. A trigger appearing unexpectedly is also a mismatch — stop and reconcile with the user.
 - If the request was explicitly to change the start mode, verify the read-back matches the **intended new** mode instead. `triggers[]` is the authority for this comparison; the platform's write-only `manual` flag is never surfaced on a read-back, so do not look for it.
 
