@@ -152,7 +152,7 @@ If any required capability is missing, or compatibility cannot be confirmed, upd
 Prefer the standard day-2 update path first:
 
 ```bash
-npx skills update workflows-install workflows-doctor workflows-create workflows-list workflows-history workflows-modify -y
+npx skills update workflows-install workflows-doctor workflows-create workflows-list workflows-history workflows-modify workflows-ai-by-zapier -y
 ```
 
 If `skills update` cannot find the installed skills, updates the wrong scope, or otherwise fails, fall back to explicit installs from canonical GitHub:
@@ -164,6 +164,7 @@ npx skills add zapier/agent-skills --skill workflows-create --yes
 npx skills add zapier/agent-skills --skill workflows-list --yes
 npx skills add zapier/agent-skills --skill workflows-history --yes
 npx skills add zapier/agent-skills --skill workflows-modify --yes
+npx skills add zapier/agent-skills --skill workflows-ai-by-zapier --yes
 ```
 
 After updating skills, stop the current skill invocation. Tell the user to reload the agent workspace and rerun their original request. Do not promise that the current invocation has changed its already-loaded instructions.
