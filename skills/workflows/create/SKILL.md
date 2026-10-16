@@ -302,7 +302,7 @@ const workflow = defineDurable<Input, unknown>(
     }
 
     // Plain code: shape the action input outside the step.
-    const taskInput = buildTaskInput(input);
+    const taskInput = { content: `Follow up: ${input.reaction}` };
 
     // App action: one runAction, object literal, module-level sdk.
     const createdTask = await ctx.step("create-todoist-task", async () =>
@@ -553,7 +553,7 @@ await ctx.step("send-approval-request", async () =>
 );
 
 const approval = await approvalPromise;
-if (!approval.approved) {
+if (approval.status !== "delivered" || !approval.value.approved) {
   throw new Error("Approval denied");
 }
 ```
