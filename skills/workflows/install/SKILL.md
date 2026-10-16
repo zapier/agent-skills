@@ -40,7 +40,7 @@ flowchart TD
 ## What This Installs
 
 - `@zapier/zapier-sdk-cli@latest` — public npm package that provides `zapier-sdk`, `zapier-sdk-cli`, and `zapier-sdk-experimental`. Installed globally.
-- Five companion skills installed through the `skills` CLI: `workflows/doctor`, `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
+- Six companion skills installed through the `skills` CLI: `workflows/doctor`, `workflows/create`, `workflows/list`, `workflows/history`, `workflows/modify`, and `workflows/ai-by-zapier` (configures an AI by Zapier step inside a workflow; used with `workflows/create` or `workflows/modify`).
 
 What this does not install:
 
@@ -260,6 +260,7 @@ npx skills add zapier/agent-skills --skill workflows-create --yes
 npx skills add zapier/agent-skills --skill workflows-list --yes
 npx skills add zapier/agent-skills --skill workflows-history --yes
 npx skills add zapier/agent-skills --skill workflows-modify --yes
+npx skills add zapier/agent-skills --skill workflows-ai-by-zapier --yes
 ```
 
 Verify:
@@ -268,7 +269,7 @@ Verify:
 npx skills list --json
 ```
 
-Expected output should include the installed workflows companion skills: `workflows-doctor`, `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`.
+Expected output should include the installed workflows companion skills: `workflows-doctor`, `workflows-create`, `workflows-list`, `workflows-history`, `workflows-modify`, and `workflows-ai-by-zapier`.
 
 If any companion skill is missing, rerun the specific `npx skills add ...` command and diagnose before proceeding.
 
@@ -286,7 +287,7 @@ Tell the user:
 - Code Workflows experimental commands are available.
 - The authenticated Zapier account email from `zapier-sdk get-profile --json`.
 - Zapier Workflows EA access was confirmed with a read-only workflow listing.
-- Five companion workflow skills are installed: `workflows/doctor`, `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
+- Six companion workflow skills are installed: `workflows/doctor`, `workflows/create`, `workflows/list`, `workflows/history`, `workflows/modify`, and `workflows/ai-by-zapier`.
 - This confirms SDK CLI install, login, Zapier Workflows EA access, and skill bootstrap. It does not yet prove that building, publishing, triggering, or running a full workflow works.
 
 Next steps for the user:
