@@ -8,6 +8,7 @@
         "workflows-install",
         "workflows-doctor",
         "workflows-create",
+        "workflows-ai-by-zapier",
         "workflows-list",
         "workflows-history",
         "workflows-modify"
