@@ -89,7 +89,9 @@ bundle_fingerprint() {
 # <source>" on every project update from a GitHub source: its deleted-upstream check
 # runs `git clone` on the bare "owner/repo" recorded in skills-lock.json, which is not
 # a clone URL. The CLI then updates each skill anyway and reports a real failure on its
-# own line and in its exit code, so this line on its own is not a failure. Fixed in 1.5.22.
+# own line and in its exit code, so this line on its own is not a failure. Fixed in 1.5.22,
+# but `npx --yes skills` with no version keeps running whichever copy npx cached first,
+# so keep this until DEFAULT_UPDATE_CMD pins skills 1.5.22 or later.
 CLI_BENIGN_LINE="Failed to check for deleted skills from "
 
 # Prints $1 without any line containing CLI_BENIGN_LINE. Pure bash on purpose: grep
