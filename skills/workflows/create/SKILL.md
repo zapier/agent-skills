@@ -539,7 +539,6 @@ Place waits at top-level workflow scope, not inside `ctx.step`.
 const [approvalPromise, callbackUrl] = await ctx.createCallback({
   name: "wait-for-approval",
   payloadSchema: z.object({ approved: z.boolean() }),
-  timeoutSeconds: 86400,
 });
 
 await ctx.step("send-approval-request", async () =>
@@ -553,7 +552,7 @@ await ctx.step("send-approval-request", async () =>
 );
 
 const approval = await approvalPromise;
-if (approval.status !== "delivered" || !approval.value.approved) {
+if (!approval.approved) {
   throw new Error("Approval denied");
 }
 ```
