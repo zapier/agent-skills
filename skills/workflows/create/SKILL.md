@@ -188,7 +188,7 @@ Webhooks by Zapier and other catch-hook apps are real triggers. Discover and con
 
 ### Learn from an existing workflow when useful
 
-If a similar working workflow exists, it can provide realistic source, connection bindings, and trigger configuration. This is optional, not a required first step. Read it with your surface's workflow-inspection tools and borrow only the patterns relevant to the new workflow.
+If a similar working workflow exists, it can provide realistic source, connection bindings, and trigger configuration. This is optional, not a required first step. Read it with your surface's workflow-inspection tools and borrow only the patterns relevant to the new workflow. Older workflows may use the positional `defineDurable("name", run)` form or wrap input in a `normalizeInput` helper. Both still work; new code needs neither.
 
 ## Phase 3: Confirm the build plan
 
@@ -224,7 +224,7 @@ The entrypoint must:
 - Import `defineDurable` from `@zapier/zapier-durable` and `createZapierSdk` from `@zapier/zapier-sdk` as static top-of-module `import` statements — every package any source file needs, declared the same way. Never import inside a function or through a dynamic `import()`.
 - Pin every dependency you declare to an exact version you've verified is real and at least 24 hours old — never invent or guess one. The registry document at `https://registry.npmjs.org/<name>` (scoped: `@scope%2Fname`) lists each version's publish time under `time`. `@zapier/zapier-sdk` is the exception: an exact pin or the literal `"latest"` both work, since the platform resolves `"latest"` to the version it actually installs. `@zapier/zapier-durable` is the runtime engine itself: its version is set by the publish step, never declared as a dependency.
 - Create one SDK client at module scope: `const sdk = createZapierSdk()`.
-- Use Zod to validate workflow input when it exists, pass the schema as `inputSchema`, and normalize stringified input before validation. Require only what the run cannot proceed without; mark every field a trigger delivers `.nullable().optional()` — `.optional()` or `.default()` alone still throws on `null`, which trigger payloads send routinely — and read it with a `??` fallback at the use site.
+- Use Zod to validate workflow input when it exists, and pass the schema as `inputSchema`. Require only what the run cannot proceed without; mark every field a trigger delivers `.nullable().optional()` — `.optional()` or `.default()` alone still throws on `null`, which trigger payloads send routinely — and read it with a `??` fallback at the use site.
 - Put every external call in a named `ctx.step`. Each app-action step contains exactly one `sdk.runAction`; an authenticated HTTP step contains one `sdk.fetch`.
 - Keep deterministic validation, branching, guards, and data shaping outside steps.
 - Put replay-variant values such as `new Date()`, `Date.now()`, and `Math.random()` inside steps so they are journaled once.
@@ -233,17 +233,6 @@ The entrypoint must:
 - Use unique, descriptive kebab-case verb-noun step names — `find-jira-issue`, `send-approval-email` — and preserve them when modifying a published workflow. Renaming a step loses its journal identity. Avoid generic names like `step-1`.
 
 A sampled record maps to its schema key by key: `"user": { "id": "U0…", "name": "alice" }` becomes `user: z.object({ id: z.string(), name: z.string() }).loose().nullable().optional()`; a key the sample never showed becomes `z.unknown()`, narrowed where it is used (`typeof v === "string" ? v : v?.id`).
-
-Input may arrive as a JSON string:
-
-```typescript
-function normalizeInput(rawInput: unknown): unknown {
-  if (typeof rawInput === "string") {
-    return JSON.parse(rawInput);
-  }
-  return rawInput;
-}
-```
 
 ### Use a valid, editor-friendly module shape
 
@@ -273,7 +262,7 @@ const workflow = defineDurable({
   name: "notify-about-jira-issue",
   inputSchema: InputSchema,
   run: async (ctx, rawInput) => {
-    const input = InputSchema.parse(normalizeInput(rawInput));
+    const input = InputSchema.parse(rawInput);
 
     const issuePage = await ctx.step("find-jira-issue", async () =>
       sdk.runAction({
