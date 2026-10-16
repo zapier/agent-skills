@@ -40,7 +40,7 @@ flowchart TD
 ## What This Installs
 
 - `@zapier/zapier-sdk-cli@latest` — public npm package that provides `zapier-sdk`, `zapier-sdk-cli`, and `zapier-sdk-experimental`. Installed globally.
-- Five companion skills installed through the `skills` CLI: `workflows/doctor`, `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
+- Six companion skills installed through the `skills` CLI: `workflows/doctor`, `workflows/create`, `workflows/list`, `workflows/history`, `workflows/modify`, and `workflows/ai-by-zapier` (configures an AI by Zapier step inside a workflow; used with `workflows/create` or `workflows/modify`).
 
 What this does not install:
 
@@ -262,6 +262,7 @@ npx skills add zapier/agent-skills --skill workflows-create --yes
 npx skills add zapier/agent-skills --skill workflows-list --yes
 npx skills add zapier/agent-skills --skill workflows-history --yes
 npx skills add zapier/agent-skills --skill workflows-modify --yes
+npx skills add zapier/agent-skills --skill workflows-ai-by-zapier --yes
 ```
 
 Verify:
@@ -270,7 +271,7 @@ Verify:
 npx skills list --json
 ```
 
-Expected output should include the installed workflows companion skills: `workflows-doctor`, `workflows-create`, `workflows-list`, `workflows-history`, and `workflows-modify`.
+Expected output should include the installed workflows companion skills: `workflows-doctor`, `workflows-create`, `workflows-list`, `workflows-history`, `workflows-modify`, and `workflows-ai-by-zapier`.
 
 If any companion skill is missing, rerun the specific `npx skills add ...` command and diagnose before proceeding.
 
@@ -288,7 +289,7 @@ Tell the user:
 - Code Workflows experimental commands are available.
 - The authenticated Zapier account email from `zapier-sdk get-profile --json`.
 - Zapier Workflows EA access was confirmed with a read-only workflow listing.
-- Five companion workflow skills are installed: `workflows/doctor`, `workflows/create`, `workflows/list`, `workflows/history`, and `workflows/modify`.
+- Six companion workflow skills are installed: `workflows/doctor`, `workflows/create`, `workflows/list`, `workflows/history`, `workflows/modify`, and `workflows/ai-by-zapier`.
 - This confirms SDK CLI install, login, Zapier Workflows EA access, and skill bootstrap. It does not yet prove that building, publishing, triggering, or running a full workflow works.
 
 Next steps for the user:
@@ -306,7 +307,7 @@ Next steps for the user:
 | `zapier-sdk --experimental --help` lacks Code Workflows commands | Old CLI or wrong package installed | Install `@zapier/zapier-sdk-cli@latest`, then rerun `zapier-sdk --version` and the help command |
 | `zapier-sdk get-profile` says not logged in | User has not authenticated the CLI | Run `zapier-sdk login` in an interactive terminal, then retry |
 | `get-profile` succeeds but `list-workflows` returns an access, permission, allowlist, or JWT/security-scheme error | The Zapier account is authenticated but does not have Zapier Workflows EA access | Stop before installing companion skills. Tell the user Zapier Workflows is currently only available to members of our closed beta, include the authenticated email, and ask them to rerun `workflows-install` after allowlisting. |
-| `zapier-sdk login` does not open a browser | No default browser configured, or remote/SSH session | Run `zapier-sdk login --headless`, open the printed login link in any browser, and paste back the callback URL it asks for; or run from a local terminal |
+| `zapier-sdk login` does not open a browser | No default browser configured, or remote/SSH session | Try `zapier-sdk login --no-browser` if supported by the installed CLI, or run from a local terminal |
 | `zapier-sdk login` hangs in a non-interactive shell | `login` is browser-interactive; cannot run unattended | Ask the user to run it manually in an actual terminal |
 | `npx skills add zapier/agent-skills --skill workflows-...` fails | Public skill source is unavailable, the skill has not been published yet, or network access failed | Confirm the `zapier/agent-skills` public repo and workflow skill path are available, then rerun the specific install command |
 | Skills do not auto-invoke after install | Agent workspace has not reloaded the skills directory | Reload workspace or restart your agent |
