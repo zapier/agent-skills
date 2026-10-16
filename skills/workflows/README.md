@@ -36,8 +36,8 @@ Workflow skills include bundle-level SDK compatibility metadata in `SKILL.md`:
 
 ```yaml
 metadata:
-  sdk_cli_min: "0.74.0"
-  sdk_cli_validated: "0.74.0"
+  sdk_cli_min: "0.85.0"
+  sdk_cli_validated: "0.86.4"
   refresh_source: "zapier/agent-skills"
 ```
 
