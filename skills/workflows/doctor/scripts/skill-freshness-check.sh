@@ -17,7 +17,7 @@ DAILY=86400
 BURST_COOLDOWN=900
 MAX_FAILURES=3
 UPDATE_NOTE="Refreshed the Zapier Workflows skills; the updates take full effect the next time you reload this workspace."
-DEFAULT_UPDATE_CMD="npx --yes skills update workflows-install workflows-doctor workflows-create workflows-list workflows-history workflows-modify -y"
+DEFAULT_UPDATE_CMD="npx --yes skills update workflows-install workflows-doctor workflows-create workflows-list workflows-history workflows-modify workflows-ai-by-zapier -y"
 
 debug() {
   if [ "${ZAPIER_WORKFLOWS_DEBUG:-}" = "1" ]; then

@@ -156,7 +156,7 @@ If any required capability is missing, or compatibility cannot be confirmed, upd
 Prefer the standard day-2 update path first:
 
 ```bash
-npx skills update workflows-install workflows-doctor workflows-create workflows-list workflows-history workflows-modify -y
+npx skills update workflows-install workflows-doctor workflows-create workflows-list workflows-history workflows-modify workflows-ai-by-zapier -y
 ```
 
 If `skills update` cannot find the installed skills, updates the wrong scope, or otherwise fails, fall back to explicit installs from canonical GitHub:

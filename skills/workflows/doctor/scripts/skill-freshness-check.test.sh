@@ -123,6 +123,12 @@ RUN_RC=$?; RUN_ERR="$(cat "$errfile")"; rm -f "$errfile"
 want_state updated; want_stdout_has "$NOTE_SUBSTR"; want_rc0
 rm -rf "$real" "$linkroot"; teardown
 
+echo "Case 15: the default update command covers every skill in the SDK CLI bundle, including workflows-ai-by-zapier"
+default_cmd="$(sed -n 's/^DEFAULT_UPDATE_CMD="\(.*\)"$/\1/p' "$SCRIPT")"
+for skill in workflows-install workflows-doctor workflows-create workflows-list workflows-history workflows-modify workflows-ai-by-zapier; do
+  case " $default_cmd " in *" $skill "*) ok "default update cmd has $skill";; *) bad "default update cmd [$default_cmd] is missing $skill";; esac
+done
+
 echo ""
 echo "TOTAL: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
