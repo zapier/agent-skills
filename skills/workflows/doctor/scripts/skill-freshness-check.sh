@@ -85,19 +85,37 @@ bundle_fingerprint() {
     | sort | cksum | awk '{print $1}'
 }
 
+# skills CLI 1.5.x up to 1.5.21 prints "✗ Failed to check for deleted skills from
+# <source>" on every project update from a GitHub source: its deleted-upstream check
+# runs `git clone` on the bare "owner/repo" recorded in skills-lock.json, which is not
+# a clone URL. The CLI then updates each skill anyway and reports a real failure on its
+# own line and in its exit code, so this line on its own is not a failure. Fixed in 1.5.22.
+CLI_BENIGN_LINE="Failed to check for deleted skills from "
+
+# Prints $1 without any line containing CLI_BENIGN_LINE. Pure bash on purpose: grep
+# and BSD sed can drop or reject lines that are not valid UTF-8.
+drop_benign_lines() {
+  local line
+  while IFS= read -r line; do
+    case "$line" in *"$CLI_BENIGN_LINE"*) ;; *) printf '%s\n' "$line" ;; esac
+  done <<EOF
+$1
+EOF
+}
+
 # Primary signal is the fingerprint diff; prose is only a fallback for the rare
 # case fingerprinting can't see the change.
 decide_outcome() {
   local before="$1" after="$2" rc="$3" out="$4" lc
   if [ "$before" != "$after" ]; then printf 'updated'; return; fi
   if [ "$rc" -ne 0 ]; then printf 'failed'; return; fi
-  lc="$(printf '%s' "$out" | tr '[:upper:]' '[:lower:]')"
+  lc="$(drop_benign_lines "$out" | tr '[:upper:]' '[:lower:]')"
   # `skills update` exits 0 even on its own errors (e.g. "No installed skills
   # found"), so scan output too. The substrings can overlap benign text like
   # "0 errors"; because the fingerprint check ran first, that only flips a silent
   # noop to a (silent) failed -> retry sooner, never suppresses a real update.
   case "$lc" in
-    *error*|*"not found"*|*enotfound*|*etimedout*|*network*|*failed*) printf 'failed'; return ;;
+    *error*|*"not found"*|*"no installed skills found"*|*enotfound*|*etimedout*|*network*|*failed*) printf 'failed'; return ;;
   esac
   case "$lc" in
     *updated*|*upgraded*|*added*|*"->"*|*"→"*) printf 'updated'; return ;;
