@@ -287,7 +287,7 @@ import { z } from "zod";
 
 const sdk = createZapierSdk();
 
-const InputSchema = z.object({ reaction: z.string() });
+const InputSchema = z.object({ reaction: z.string(), message: z.string() });
 type Input = z.infer<typeof InputSchema>;
 
 const TODOIST_APP_KEY = "TodoistV2CLIAPI";
@@ -302,7 +302,7 @@ const workflow = defineDurable<Input, unknown>(
     }
 
     // Plain code: shape the action input outside the step.
-    const taskInput = { content: `Follow up: ${input.reaction}` };
+    const taskInput = { content: `Follow up: ${input.message}` };
 
     // App action: one runAction, object literal, module-level sdk.
     const createdTask = await ctx.step("create-todoist-task", async () =>
@@ -556,6 +556,8 @@ if (!approval.approved) {
   throw new Error("Approval denied");
 }
 ```
+
+This callback has no deadline: the run waits until something posts to `callbackUrl`. To add one, pass `timeoutSeconds` to `createCallback`, and change the check with it. On `@zapier/zapier-durable` 0.6.0 and later (what `--zapier-durable-version latest` installs), a callback with `timeoutSeconds` resolves a `CallbackResult` (`{ status: "delivered", value }` or `{ status: "expired" }`) instead of the payload, so `approval.approved` is always `undefined` and every approval reads as denied. Check `approval.status === "delivered" && approval.value.approved`, and report `"expired"` as a timeout rather than a denial. Durable 0.5.x resolves the payload either way.
 
 ### Parallel Or Repeated Work
 
