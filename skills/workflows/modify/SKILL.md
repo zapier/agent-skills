@@ -107,7 +107,7 @@ Prefer editing an existing local workflow file if one exists. Otherwise, write `
 
 Apply the requested change narrowly. Preserve existing Zod schemas, `ctx.step` boundaries, connection aliases, dependency pins, durable runtime version, connection bindings, app-version bindings, trigger configuration, and visibility/enabled state unless there is a reason to change them. Preserve any unpublished draft content that isn't part of the requested change.
 
-Put replay-variant values such as `new Date()`, `Date.now()`, and `Math.random()` inside steps so they are journaled once. A value computed outside a step changes on replay and fails the run with `DeterminismViolation`.
+Each `ctx.step` creates a runtime operation with a journaled result and influences workflow appearance in visual representations. All side effects and external calls, including reads, MUST execute inside step callbacks. Generate current timestamps, random values, and new IDs inside steps too, and return them for downstream use so replay reuses the recorded values. Keep deterministic parsing, validation, branching, loops, filters, formatting, input preparation, and final return construction outside steps by default. Keep `ctx.wait` and `ctx.createCallback` at workflow scope.
 
 When the edit adds a new AI/LLM step, follow the AI by Zapier guidance in `workflows-create` Phase 2.
 
