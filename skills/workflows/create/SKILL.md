@@ -72,7 +72,7 @@ The entrypoint may also end `.mts`, `.js`, `.mjs`, `.cjs`, or `.cts` rather than
 
 Create a complete durable workflow from natural language, test it, deploy it, and verify it is live.
 
-A workflow is a TypeScript module using `defineDurable` from `@zapier/zapier-durable`. Each `ctx.step()` is journaled: when a run retries or replays, a completed step returns its recorded result instead of repeating the work. Published workflows run on Zapier's infrastructure independently of this conversation.
+A workflow is a TypeScript module using `defineDurable` from `@zapier/zapier-durable`. Published workflows run on Zapier's infrastructure independently of this conversation.
 
 The surface-specific sections of this skill map each capability used below — action discovery, trigger discovery, connection listing, test probes, publishing, and test runs — to your surface's concrete tools or commands. When this skill says "your discovery tool" or "your publish mechanism", use that mapping.
 
@@ -225,16 +225,19 @@ The entrypoint must:
 - Pin every dependency you declare to an exact version you've verified is real and at least 24 hours old — never invent or guess one. The registry document at `https://registry.npmjs.org/<name>` (scoped: `@scope%2Fname`) lists each version's publish time under `time`. `@zapier/zapier-sdk` is the exception: an exact pin or the literal `"latest"` both work, since the platform resolves `"latest"` to the version it actually installs. `@zapier/zapier-durable` is the runtime engine itself: its version is set by the publish step, never declared as a dependency.
 - Create one SDK client at module scope: `const sdk = createZapierSdk()`.
 - Use Zod to validate workflow input when it exists, and pass the schema as `inputSchema`. Require only what the run cannot proceed without; mark every field a trigger delivers `.nullable().optional()` — `.optional()` or `.default()` alone still throws on `null`, which trigger payloads send routinely — and read it with a `??` fallback at the use site.
-- Put every external call in a named `ctx.step`. Each app-action step contains exactly one `sdk.runAction`; an authenticated HTTP step contains one `sdk.fetch`.
-- Keep deterministic validation, branching, guards, and data shaping outside steps.
-- Put replay-variant values such as `new Date()`, `Date.now()`, and `Math.random()` inside steps so they are journaled once.
 - Use the exact discovered `read`, `search`, or `write` action type.
 - Use aliases for outer SDK connections; follow "Map connections" for schema-owned action-input references.
 - Use unique, descriptive kebab-case verb-noun step names — `find-jira-issue`, `send-approval-email` — and preserve them when modifying a published workflow. Renaming a step loses its journal identity. Avoid generic names like `step-1`.
 
 A sampled record maps to its schema key by key: `"user": { "id": "U0…", "name": "alice" }` becomes `user: z.object({ id: z.string(), name: z.string() }).loose().nullable().optional()`; a key the sample never showed becomes `z.unknown()`, narrowed where it is used (`typeof v === "string" ? v : v?.id`).
 
-### Use a valid, editor-friendly module shape
+### Choose step boundaries
+
+- Each `ctx.step` creates a runtime operation and influences workflow appearance in visual representations. Completed steps return journaled results on replay.
+- All side effects, external calls (including reads), and timestamp/random/ID generation MUST run inside step callbacks. Return generated values for replay.
+- Keep deterministic parsing, validation, control flow, and data shaping outside steps by default. A loop implementing one operation can stay inside its step; its work may repeat on retry. Keep `ctx.wait` and `ctx.createCallback` at workflow scope.
+
+### Use a valid module shape
 
 Every `defineDurable` call must resolve `run` to a function. Prefer the object form `defineDurable({ name, inputSchema, run })`; `defineDurable("name", run)` also works. Do not pass a bare function without a workflow name or an object without `run`; those fail with `durable.run is not a function`.
 
