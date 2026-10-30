@@ -388,10 +388,10 @@ await ctx.step("send-approval-request", async () =>
   }),
 );
 
+// With timeoutSeconds: { status: "delivered", value, at } | { status: "expired", at }
 const approval = await approvalPromise;
-if (!approval.approved) {
-  return { skipped: true, reason: "denied" };
-}
+if (approval.status === "expired") return { skipped: true, reason: "approval-timed-out" };
+if (!approval.value.approved) return { skipped: true, reason: "denied" };
 ```
 
 Use `Promise.all` outside steps for independent work, with one step per item:
