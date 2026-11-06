@@ -195,7 +195,7 @@ If a similar working workflow exists, it can provide realistic source, connectio
 Present this plan:
 
 ```text
-Workflow: <kebab-case-name>
+Workflow: <Title Case Name>
 Input: { field1, field2 }
 Connections:
   alias = connectionId (connection title)
