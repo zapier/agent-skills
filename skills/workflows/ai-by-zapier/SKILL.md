@@ -149,7 +149,9 @@ This example is prompt-only: it has no `tools`, so no tool-capable model is need
 
 Replace sample context with runtime values from the trigger or prior steps; JSON-stringify structured context into a named `inputFields` string when needed. `includeWorkflowData: false` keeps this example independent of automatic Zap history; it does not remove the explicit inputs.
 
-`outputFields` entries use `name`, optional `description`, `type`, and `isRequired`. For an enum, use `type: "category_single"` or `"category_multi"` with nonempty `options`, not `text` plus options. With the example above, read `result.data[0].summary` in the SDK. With no configured output fields, read `result.data[0].output`; `outputFields: []` also requests that default and overrides legacy `outputSchema`. Leave `isOutputArray` false/omitted for this basic recipe. Verify the actual result wrapper on your surface.
+`outputFields` entries use `name`, optional `description`, `type`, and `isRequired`. For an enum, use `type: "category_single"` or `"category_multi"` with nonempty `options`, not `text` plus options.
+- **Single object (`isOutputArray` false or omitted):** Use when the step returns one item, classification, or unified summary. With the example above, read `result.data[0].summary` in the SDK. With no configured output fields (or `outputFields: []`, which overrides legacy `outputSchema`), read `result.data[0].output`.
+- **List of objects (`"isOutputArray": true`):** Use whenever the step finds, extracts, or generates multiple distinct items or records (such as line items, search matches, or a list of ideas). Define per-item `outputFields` for each record (do not serialize a JSON array into a single `*_json` `text` field or create numbered fields like `item_1`, `item_2`), set `"isOutputArray": true`, and read the returned array at `result.data[0].result.items` in the SDK. Verify the actual result wrapper on your surface.
 
 ## Complete integration-tool example
 
