@@ -143,7 +143,7 @@ Use prompt-only AbZ when the trigger and previous steps contain all evidence. Em
 
 Discover the current `get_completion` action, its editable fields, dependent choices, and complete input schema when available. Metadata owns the contract; if schema is unavailable, use only your surface's documented AbZ fallback, not labels or remembered examples. Use live model defaults unless the user requests another supported choice. `inputs.authentication_id: "0"` is the managed-model credential input, not an outer workflow or nested-tool connection. Do not invoke `get_completion_agentic`.
 
-Pass stable instructions separately from runtime context. Default output is `result.data[0].output`; single-object `outputFields` are on `result.data[0].<field>`, and `isOutputArray: true` (multiple items) returns `result.data[0].result.items`.
+Pass stable instructions separately from runtime context. Default output is `result.data[0].output`; single-object `outputFields` are on `result.data[0].<field>`; `isOutputArray: true` returns `result.data[0].result.items`. Verify the actual result.
 
 The durable workflow still owns its trigger, branches, destinations, approvals, side effects, and completion behavior; a bounded LLM/tool loop is not a persistent agent automation.
 
