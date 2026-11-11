@@ -68,8 +68,6 @@ If you add a build script to `package.json`, use `--skipLibCheck` for now to avo
 
 `durable.run is not a function` is a code-shape defect in the `defineDurable` call, not a version mismatch. Do not change the `@zapier/zapier-durable` or `@zapier/zapier-sdk` versions to fix it; correct the call so it passes a name and a `run` function.
 
-The entrypoint may also end `.mts`, `.js`, `.mjs`, `.cjs`, or `.cts` rather than `.ts`, but there must be exactly one. Publish rejects a top-level `index.*`, `package.json`, or `.zapierrc`, and any `_zapier_*` name, as reserved — a nested `lib/index.ts` is fine.
-
 Create a complete durable workflow from natural language, test it, deploy it, and verify it is live.
 
 A workflow is a TypeScript module using `defineDurable` from `@zapier/zapier-durable`. Published workflows run on Zapier's infrastructure independently of this conversation.
@@ -188,7 +186,7 @@ Webhooks by Zapier and other catch-hook apps are real triggers. Discover and con
 
 ### Learn from an existing workflow when useful
 
-If a similar working workflow exists, it can provide realistic source, connection bindings, and trigger configuration. This is optional, not a required first step. Read it with your surface's workflow-inspection tools and borrow only the patterns relevant to the new workflow. Older workflows may use the positional `defineDurable("name", run)` form or wrap input in a `normalizeInput` helper. Both still work; new code needs neither.
+If a similar working workflow exists, it can provide realistic source, connection bindings, and trigger configuration. This is optional, not a required first step. Read it with your surface's workflow-inspection tools and borrow only the patterns relevant to the new workflow. Older workflows may use the positional `defineDurable` form or a `normalizeInput` helper; new code needs neither.
 
 ## Phase 3: Confirm the build plan
 
@@ -217,7 +215,7 @@ If required details are missing or ambiguous, stop here and ask a focused questi
 
 Source is a `{ path: contents }` map. Every source submission replaces the whole map with no server-side merge: a file left out is deleted, so always send the complete set.
 
-Exactly one top-level entrypoint, normally `workflow.ts`. Keep a small workflow in it; when it grows, move pure helpers, long schemas, or prompt text into relative-path modules with the extension (`./lib/format.ts`, stored under that key), keeping `defineDurable` and every `ctx.step` in the entrypoint so the editor can read the step graph.
+The entrypoint must be exactly one top-level `workflow.<ext>` (`ts`, `mts`, `js`, `mjs`, `cjs`, `cts`); name a new one `workflow.ts`. Publish rejects reserved top-level names: `index.*`, `package.json`, `.zapierrc`, `_zapier_*`. Nested `lib/index.ts` is fine. Keep a small workflow in it; when it grows, move pure helpers, long schemas, or prompt text into relative-path modules with the extension (`./lib/format.ts`, stored under that key), keeping `defineDurable` and every `ctx.step` in the entrypoint so the editor can read the step graph.
 
 The entrypoint must:
 
@@ -308,19 +306,9 @@ The Zapier editor renders a `ctx.step` as an app-action step (with the app icon)
 
 ### Reach apps only through the SDK
 
-Use `createZapierSdk()` with published aliases for outer connections, or schema-owned action-input references as described in "Map connections". There is no global Zapier client, no connection object on `ctx`, and no connection token in `process.env`.
+There is no global Zapier client, no connection object on `ctx`, and no connection token in `process.env`.
 
 ```typescript
-await ctx.step("send-slack-message", async () =>
-  sdk.runAction({
-    appKey: "SlackCLIAPI",
-    actionType: "write",
-    actionKey: "direct_message",
-    connection: "slack_work",
-    inputs,
-  }),
-);
-
 const gitlabUser = await ctx.step("fetch-gitlab-user", async () => {
   const response = await sdk.fetch("https://gitlab.com/api/v4/user", {
     connection: "gitlab_work",
@@ -336,7 +324,9 @@ const gitlabUser = await ctx.step("fetch-gitlab-user", async () => {
 await ctx.zapier.fetch(url, { connection: ctx.connections.slack });
 ```
 
-Prefer `sdk.runAction` when a Zapier action exists — it handles dynamic and dependent fields, app-specific auth schemes, and normalized responses. Use authenticated `sdk.fetch` only when no action provides the required behavior. Consume the `Response` inside the step and return serializable JSON or text; never return the raw response or body stream as step output.
+Prefer `sdk.runAction` when a Zapier action exists — it handles dynamic and dependent fields, app-specific auth schemes, and normalized responses. Use authenticated `sdk.fetch` only when no action provides the required behavior. Consume the `Response` inside the step and return serializable JSON or text, never the raw response or body stream.
+
+Global `fetch` and HTTP clients (`axios`, `node-fetch`, `got`, `undici`, `http(s)`) can't reach external hosts, and publish rejects them. For an API with no Zapier integration, use API by Zapier via `sdk.runAction` or `sdk.fetch`, with discovered keys and connection.
 
 ### Filter pattern
 
@@ -455,7 +445,7 @@ Finish by reporting:
 ## Failure signatures
 
 - An existing action reports action-not-found: the workflow likely used the wrong `actionType`; inspect the action and use the exact discovered `read`, `search`, or `write` type.
-- A call fails while reading `fetch` or a connection from `undefined`: the source used `ctx.zapier`, `ctx.connection`, or `ctx.connections`; replace it with the module-scope `createZapierSdk()` client and a connection alias.
+- A call fails reading `fetch` or a connection from `undefined`: replace `ctx.zapier`, `ctx.connection`, or `ctx.connections` with the module-scope `sdk` and a connection alias.
 - A triggered workflow becomes disabled after publish: the asynchronous trigger claim failed; verify that `selected_api`, the action key, `params`, and `authentication_id` all come from one discovered trigger result, then republish.
 
 ## Constraints
