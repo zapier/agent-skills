@@ -215,7 +215,7 @@ If required details are missing or ambiguous, stop here and ask a focused questi
 
 Source is a `{ path: contents }` map. Every source submission replaces the whole map with no server-side merge: a file left out is deleted, so always send the complete set.
 
-The entrypoint must be exactly one top-level `workflow.<ext>` (`ts`, `mts`, `js`, `mjs`, `cjs`, `cts`); name a new one `workflow.ts`. Publish rejects reserved top-level names: `index.*`, `package.json`, `.zapierrc`, `_zapier_*`. Nested `lib/index.ts` is fine. Keep a small workflow in it; when it grows, move pure helpers, long schemas, or prompt text into relative-path modules with the extension (`./lib/format.ts`, stored under that key), keeping `defineDurable` and every `ctx.step` in the entrypoint so the editor can read the step graph.
+The entrypoint must be exactly one top-level `workflow.<ext>` (`ts`, `mts`, `js`, `mjs`, `cjs`, `cts`); name a new one `workflow.ts`. Keep a small workflow in it; when it grows, move pure helpers, long schemas, or prompt text into relative-path modules with the extension (`./lib/format.ts`, stored under that key), keeping `defineDurable` and every `ctx.step` in the entrypoint so the editor can read the step graph. Publish rejects reserved top-level names: `index.*`, `package.json`, `.zapierrc`, `_zapier_*`. Nested `lib/index.ts` is fine.
 
 The entrypoint must:
 
