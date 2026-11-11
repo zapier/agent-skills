@@ -309,6 +309,16 @@ The Zapier editor renders a `ctx.step` as an app-action step (with the app icon)
 There is no global Zapier client, no connection object on `ctx`, and no connection token in `process.env`.
 
 ```typescript
+await ctx.step("send-slack-message", async () =>
+  sdk.runAction({
+    appKey: "SlackCLIAPI",
+    actionType: "write",
+    actionKey: "direct_message",
+    connection: "slack_work",
+    inputs,
+  }),
+);
+
 const gitlabUser = await ctx.step("fetch-gitlab-user", async () => {
   const response = await sdk.fetch("https://gitlab.com/api/v4/user", {
     connection: "gitlab_work",
