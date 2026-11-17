@@ -72,7 +72,7 @@ Create a complete durable workflow from natural language, test it, deploy it, an
 
 A workflow is a TypeScript module using `defineDurable` from `@zapier/zapier-durable`. Published workflows run on Zapier's infrastructure independently of this conversation.
 
-The surface-specific sections of this skill map each capability used below — action discovery, trigger discovery, connection listing, test probes, publishing, and test runs — to your surface's concrete tools or commands. When this skill says "your discovery tool" or "your publish mechanism", use that mapping.
+Surface sections map each capability used below (action and trigger discovery, connection listing, test probes, publishing, test runs) to concrete tools or commands. Where this skill says "your discovery tool" or "your publish mechanism", use that mapping.
 
 ## Phase 1: Understand the intent
 
@@ -87,7 +87,7 @@ Extract from the user's request:
 7. Waits, callbacks, retries, or human approval gates.
 8. Start mode (required — see below).
 
-Summarize the proposed workflow before discovery. Ask focused clarifying questions only for genuinely required intent with no safe default — an unresolved ambiguous destination, a missing recipient, or what to do when a search returns nothing. Do not generate source until the user agrees on the workflow shape.
+Summarize the proposed workflow before discovery. Ask focused clarifying questions only for required intent with no safe default — an ambiguous destination, a missing recipient, or what to do when a search returns nothing. Phase 3 is the single approval point.
 
 ### Classify the start mode (required)
 
@@ -98,9 +98,9 @@ Every workflow has exactly one start mode, and you must decide it here:
 
 Default to looking for a trigger in the build instruction. Infer from intent cues: recurring or time words ("every morning", "daily", "on a schedule") mean a scheduled `trigger`; "when X happens in `<app>`" or "whenever a new `<record>` is created" mean an event-driven `trigger`; explicit "manually", "on demand", or "when I run it" means `manual`.
 
-If the start mode is ambiguous — no clear trigger cue and no explicit manual cue — ask the user whether to run it manually on-demand or attach a trigger, and which. Never silently assume `manual` just because no trigger was named. A triggerless workflow published on an unconfirmed assumption is the exact failure this classification prevents.
+If the start mode is ambiguous — no clear trigger cue and no explicit manual cue — ask the user whether to run it manually on-demand or attach a trigger, and which. Never silently assume `manual` just because no trigger was named.
 
-Carry the chosen start mode forward: confirm it in the Phase 3 build plan, and make it the gate for the Phase 5 deployment verification.
+Carry it forward: state it on the Phase 3 plan's `Start mode` line (exactly one mode) and verify the deployment against it in Phase 5.
 
 ### What is not missing intent
 
@@ -186,7 +186,7 @@ Webhooks by Zapier and other catch-hook apps are real triggers. Discover and con
 
 ### Learn from an existing workflow when useful
 
-If a similar working workflow exists, it can provide realistic source, connection bindings, and trigger configuration. This is optional, not a required first step. Read it with your surface's workflow-inspection tools and borrow only the patterns relevant to the new workflow. Older workflows may use the positional `defineDurable` form or a `normalizeInput` helper; new code needs neither.
+If a similar working workflow exists, it can provide realistic source, connection bindings, and trigger configuration. This is optional, not a required first step. Read it with your surface's workflow-inspection tools and borrow only the patterns relevant to the new workflow. Older workflows may use the positional `defineDurable` form or a `normalizeInput` helper; write new code in the object form without either.
 
 ## Phase 3: Confirm the build plan
 
@@ -207,8 +207,6 @@ Steps:
 Return: <summary of output>
 ```
 
-The Start mode line is required and must state exactly one of the two modes classified in Phase 1.
-
 If required details are missing or ambiguous, stop here and ask a focused question. If everything was supplied or resolved unambiguously through discovery, the user's request to create the workflow is already approval: present the plan briefly and proceed in the same turn.
 
 ## Phase 4: Write the workflow source
@@ -223,7 +221,7 @@ The entrypoint must:
 - Pin every dependency you declare to an exact version you've verified is real and at least 24 hours old — never invent or guess one. The registry document at `https://registry.npmjs.org/<name>` (scoped: `@scope%2Fname`) lists each version's publish time under `time`. `@zapier/zapier-sdk` is the exception: an exact pin or the literal `"latest"` both work, since the platform resolves `"latest"` to the version it actually installs. `@zapier/zapier-durable` is the runtime engine itself: its version is set by the publish step, never declared as a dependency.
 - Create one SDK client at module scope: `const sdk = createZapierSdk()`.
 - Use Zod to validate workflow input when it exists, and pass the schema as `inputSchema`. Require only what the run cannot proceed without; mark every field a trigger delivers `.nullable().optional()` — `.optional()` or `.default()` alone still throws on `null`, which trigger payloads send routinely — and read it with a `??` fallback at the use site.
-- Use the exact discovered `read`, `search`, or `write` action type.
+- Use the exact discovered `read`, `search`, or `write` action type; a wrong one fails as action-not-found.
 - Use aliases for outer SDK connections; follow "Map connections" for schema-owned action-input references.
 - Use unique, descriptive kebab-case verb-noun step names — `find-jira-issue`, `send-approval-email` — and preserve them when modifying a published workflow. Renaming a step loses its journal identity. Avoid generic names like `step-1`.
 
@@ -237,7 +235,7 @@ A sampled record maps to its schema key by key: `"user": { "id": "U0…", "name"
 
 ### Use a valid module shape
 
-Every `defineDurable` call must resolve `run` to a function. Prefer the object form `defineDurable({ name, inputSchema, run })`; `defineDurable("name", run)` also works. Do not pass a bare function without a workflow name or an object without `run`; those fail with `durable.run is not a function`.
+Every `defineDurable` call must resolve `run` to a function. Use the object form `defineDurable({ name, inputSchema, run })`. Do not pass a bare function without a workflow name or an object without `run`; those fail with `durable.run is not a function`.
 
 Default to module-level SDK and constants, a named durable, and a direct `runAction` body for each app step:
 
@@ -306,164 +304,35 @@ The Zapier editor renders a `ctx.step` as an app-action step (with the app icon)
 
 ### Reach apps only through the SDK
 
-There is no global Zapier client, no connection object on `ctx`, and no connection token in `process.env`.
-
-```typescript
-await ctx.step("send-slack-message", async () =>
-  sdk.runAction({
-    appKey: "SlackCLIAPI",
-    actionType: "write",
-    actionKey: "direct_message",
-    connection: "slack_work",
-    inputs,
-  }),
-);
-
-const gitlabUser = await ctx.step("fetch-gitlab-user", async () => {
-  const response = await sdk.fetch("https://gitlab.com/api/v4/user", {
-    connection: "gitlab_work",
-    method: "GET",
-  });
-  if (!response.ok) {
-    throw new Error(`GitLab returned ${response.status}`);
-  }
-  return response.json();
-});
-
-// Wrong: ctx.zapier and ctx.connections are undefined.
-await ctx.zapier.fetch(url, { connection: ctx.connections.slack });
-```
+There is no global Zapier client, no connection object on `ctx`, and no connection token in `process.env`: `ctx.zapier` and `ctx.connections` are undefined, and a call that reads `fetch` or a connection from them fails. Call `sdk` from inside a step.
 
 Prefer `sdk.runAction` when a Zapier action exists — it handles dynamic and dependent fields, app-specific auth schemes, and normalized responses. Use authenticated `sdk.fetch` only when no action provides the required behavior. Consume the `Response` inside the step and return serializable JSON or text, never the raw response or body stream.
 
 Global `fetch` and HTTP clients (`axios`, `node-fetch`, `got`, `undici`, `http(s)`) can't reach external hosts, and publish rejects them. For an API with no Zapier integration, use API by Zapier via `sdk.runAction` or `sdk.fetch`, with discovered keys and connection.
 
-### Filter pattern
+### Patterns
 
-Use an early return to filter out runs that don't meet a condition, and keep the side-effect-free condition logic outside `ctx.step` — filters add no value to the step graph. For complex multi-condition filters, use named const bindings:
-
-```typescript
-const tags = input.tags ?? [];
-const isActiveAndUrgent = input.status === "active" && tags.includes("urgent");
-const isHighPriority = (input.priority ?? 0) > 8;
-const shouldRun = isActiveAndUrgent || isHighPriority;
-
-if (!shouldRun) {
-  return { skipped: true, reason: "filter-did-not-match" };
-}
-```
-
-### Durable patterns
-
-Keep waits at workflow scope, not inside a step:
-
-```typescript
-await ctx.wait("wait-before-followup", 3600);
-```
-
-Journal replay-variant values once:
-
-```typescript
-const createdAt = await ctx.step("capture-created-at", async () =>
-  new Date().toISOString(),
-);
-```
-
-Use callbacks for human approval:
-
-```typescript
-const [approvalPromise, callbackUrl] = await ctx.createCallback({
-  name: "wait-for-approval",
-  payloadSchema: z.object({ approved: z.boolean() }),
-  timeoutSeconds: 86400,
-});
-
-await ctx.step("send-approval-request", async () =>
-  sdk.runAction({
-    appKey: "ExampleCLIAPI",
-    actionType: "write",
-    actionKey: "send_message",
-    connection: "example_connection",
-    inputs: { callbackUrl },
-  }),
-);
-
-// With timeoutSeconds: { status: "delivered", value, at } | { status: "expired", at }
-const approval = await approvalPromise;
-if (approval.status === "expired") return { skipped: true, reason: "approval-timed-out" };
-if (!approval.value.approved) return { skipped: true, reason: "denied" };
-```
-
-Use `Promise.all` outside steps for independent work, with one step per item:
-
-```typescript
-const results = await Promise.all(
-  items.map((item, index) =>
-    ctx.step(`process-item-${index}`, async () =>
-      sdk.runAction({
-        appKey: "ExampleCLIAPI",
-        actionType: "write",
-        actionKey: "do_something",
-        connection: "example_connection",
-        inputs: { item },
-      }),
-    ),
-  ),
-);
-```
-
-Use step retries for flaky external calls:
-
-```typescript
-const result = await ctx.step({
-  name: "call-flaky-service",
-  maxAttempts: 3,
-  retryDelaySeconds: 5,
-  run: async () =>
-    sdk.runAction({
-      appKey: "ExampleCLIAPI",
-      actionType: "write",
-      actionKey: "do_something",
-      connection: "example_connection",
-      inputs: {},
-    }),
-});
-```
+Filter with an early return and keep the condition logic outside `ctx.step`. Fan out with `Promise.all` outside steps, one step per item. For the filter, wait, journaled timestamp, approval callback, fan-out, step retry and authenticated `sdk.fetch` code, read `references/patterns.md`.
 
 ## Phase 5: Test, publish, and verify
 
-The mechanics of testing and publishing are surface-specific — follow your surface's sections. The invariants are not:
+Surface sections split this phase into stage (5), test (6) and publish-and-verify (7) and own the mechanics. These invariants hold on every surface.
+
+**Test**
 
 - Default to a private workflow unless the user explicitly asks for account-wide visibility.
-- Validate the workflow with a real test run before it goes live with its trigger. If your surface can run source directly without creating a workflow, test before creating. If it can execute an unpublished draft (draft test runs), test the draft unpublished and publish only once the test passes. Only when neither exists, publish trigger-less or disabled first, test, and add the trigger only after the test passes.
-- Before a test that can change connected apps, explain each likely side effect and wait for confirmation. Prefer a harmless representative input in the sampled record's shape — when the workflow filters events before an external write, a clearly non-matching sample exercises the safe skip path. This warning is not a second approval gate when the user already asked to create the workflow; ask first only for destructive, costly, sensitive, or otherwise unexpected test effects.
-- Fix the source and retest until the test result matches the confirmed plan. Publish only the tested source. Never leave an untested version live.
-- Trigger claiming is asynchronous and can fail silently. After publishing a triggered workflow, poll your surface's workflow read-back until the trigger is active and the workflow has the intended enabled state. Treat a failed claim as a failed deployment even if the workflow remains enabled. Do not report success until both are verified from tool results — never infer or claim activation. Transitional read-back states (`unclaimed` / `pending`) may just need more polling.
-- Verify the deployment against the confirmed start mode, not merely against `enabled` — a triggerless workflow reads back as `enabled: true`, so an `enabled` check alone silently passes a workflow that was supposed to have a trigger and doesn't. The trigger's actual presence on the workflow read-back is the authority: a `trigger`-mode workflow must read back with its trigger present, a `manual`-mode workflow with none. Reconcile a mismatch with the user rather than reporting success.
-- If the trigger exposes a `webhook_url`, show it to the user — it is the catch URL intended for external services, and unlike a workflow-level trigger/invoke URL it is meant to be shared. Most triggers have no `webhook_url`; that is normal. If a catch-hook trigger is active but no `webhook_url` is surfaced, point the user to the trigger step in the editor link rather than inventing a URL. Do not print a workflow-level trigger URL that invokes the workflow as the authenticated account unless the user explicitly asks.
+- Test with a real run before the workflow goes live with its trigger. In order of preference: run source directly before creating; test an unpublished draft and publish only after it passes; only when neither exists, publish trigger-less or disabled, test, then add the trigger. A surface that forbids the last option says so; follow it.
+- Before a test that can change connected apps, explain each likely side effect. This is not a second approval gate when the user already asked to create the workflow; ask first only for destructive, costly, sensitive, or otherwise unexpected effects. Write probes always need confirmation (Phase 2). Prefer a harmless input in the sampled record's shape; when the workflow filters events before an external write, a clearly non-matching sample exercises the safe skip path.
+- Fix the source and retest until the result matches the confirmed plan. Read and fix publish errors rather than guessing around them. Publish only tested source; never leave an untested version live.
 
-Finish by reporting:
+**Verify**
 
-- Workflow name and ID.
-- Whether testing passed.
-- Whether it is enabled.
-- Whether it is private or account-visible.
-- The confirmed start mode: `trigger` (an app trigger or catch-hook trigger) or `manual` (on-demand only), and that the start-mode gate confirmed the deployment matches it.
-- The trigger's `webhook_url`, when present.
-- The editor link: `https://zapier.com/workflow/<workflow-id>`.
+- Trigger claiming is asynchronous and can fail silently. After publishing a triggered workflow, poll the workflow read-back until the trigger is active and the enabled state is as intended; `unclaimed` and `pending` only need more polling. A failed claim, or a workflow that turns disabled after publish, is a failed deployment even if it stays enabled: check that `selected_api`, the action key, `params` and `authentication_id` all come from one discovered trigger result, then republish.
+- Verify against the confirmed start mode, not just `enabled`: a triggerless workflow reads back as `enabled: true`. The trigger's presence on the read-back is the authority: a `trigger`-mode workflow must read back with its trigger, a `manual`-mode workflow with none. Reconcile a mismatch with the user rather than reporting success.
+- Report success only from tool results; never infer activation.
+- If the trigger exposes a `webhook_url`, show it: it is the catch URL meant for external services. Most triggers have none. If a catch-hook trigger is active with no `webhook_url`, point to the trigger step in the editor link instead of inventing a URL. Never print a workflow-level invoke URL, which runs the workflow as the authenticated account, unless the user asks.
 
-## Failure signatures
-
-- An existing action reports action-not-found: the workflow likely used the wrong `actionType`; inspect the action and use the exact discovered `read`, `search`, or `write` type.
-- A call fails reading `fetch` or a connection from `undefined`: replace `ctx.zapier`, `ctx.connection`, or `ctx.connections` with the module-scope `sdk` and a connection alias.
-- A triggered workflow becomes disabled after publish: the asynchronous trigger claim failed; verify that `selected_api`, the action key, `params`, and `authentication_id` all come from one discovered trigger result, then republish.
-
-## Constraints
-
-- Never embed credentials, tokens, or secrets in source. Use outer connection aliases and only schema-advertised, discovered references inside action inputs.
-- Never invent app keys, action keys, action types, field names, trigger values, versions, or connection IDs.
-- Confirm before any run, write probe, or publish that may cause side effects.
-- Read and fix publish errors rather than guessing around them.
+Finish by reporting the workflow name and ID, whether testing passed, whether it is enabled, whether it is private or account-visible, the confirmed start mode and that the deployment matches it, the `webhook_url` when present, and the editor link `https://zapier.com/workflow/<workflow-id>`.
 
 ## SDK CLI mechanics: test, deploy, verify
 
