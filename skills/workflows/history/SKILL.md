@@ -54,6 +54,8 @@ zapier-sdk --stability experimental get-workflow-run <run-id> --json
 
 Draft test runs started with `run-workflow-draft` are workflow runs too (`kind: "draft"`); inspect them with `get-workflow-run`.
 
+A `held` run is paused until someone acts on it. Report its `status_reason` and quote `status_detail` to the user as written: it says why the run is held and how to release it.
+
 If a manual trigger response returns a trigger ID before a workflow run ID is available, bridge from trigger to run:
 
 ```bash
